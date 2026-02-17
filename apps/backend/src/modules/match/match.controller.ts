@@ -1,6 +1,10 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
-import { addMatchPlayersService, createMatchService } from "./match.service";
+import {
+  addMatchPlayersService,
+  createMatchService,
+  startInningsService,
+} from "./match.service";
 
 export const createMatch = async (req: AuthRequest, res: Response) => {
   try {
@@ -29,5 +33,20 @@ export const addMatchPlayers = async (req: AuthRequest, res: Response) => {
     res.status(201).json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const startMatch = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+
+    const innings = await startInningsService(matchId);
+
+    res.json({
+      message: "Match started",
+      innings,
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
 };

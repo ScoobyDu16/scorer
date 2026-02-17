@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth.middleware";
-import { addMatchPlayers, createMatch } from "./match.controller";
+import { addMatchPlayers, createMatch, startMatch } from "./match.controller";
 
 const router = Router();
 
@@ -9,5 +9,7 @@ router.post("/", authMiddleware, createMatch);
 
 // Add players to match
 router.post("/:matchId/players", authMiddleware, addMatchPlayers);
+
+router.post("/:matchId/start", authMiddleware, startMatch);
 
 export default router;

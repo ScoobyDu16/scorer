@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "../../db/client";
-import { matches, matchPlayers } from "../../db/schema";
+import { innings, matches, matchPlayers } from "../../db/schema";
 
 export const createMatchRepo = async (data: any) => {
   const [match] = await db.insert(matches).values(data).returning();
@@ -8,4 +9,28 @@ export const createMatchRepo = async (data: any) => {
 
 export const addMatchPlayersRepo = async (data: any[]) => {
   return db.insert(matchPlayers).values(data).returning();
+};
+
+export const getMatchByIdRepo = async (matchId: string) => {
+  const [match] = await db
+    .select()
+    .from(matches)
+    .where(eq(matches.id, matchId));
+
+  return match;
+};
+
+export const updateMatchRepo = async (matchId: string, data: any) => {
+  const [match] = await db
+    .update(matches)
+    .set(data)
+    .where(eq(matches.id, matchId))
+    .returning();
+
+  return match;
+};
+
+export const createInningsRepo = async (data: any) => {
+  const [record] = await db.insert(innings).values(data).returning();
+  return record;
 };
