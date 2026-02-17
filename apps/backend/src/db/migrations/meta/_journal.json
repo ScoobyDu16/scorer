@@ -43,6 +43,13 @@
       "when": 1771332767715,
       "tag": "0005_worried_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771332926492,
+      "tag": "0006_even_magus",
+      "breakpoints": true
     }
   ]
 }
