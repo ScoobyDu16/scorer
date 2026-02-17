@@ -15,6 +15,13 @@
       "when": 1771330778231,
       "tag": "0001_spicy_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771330961010,
+      "tag": "0002_true_synch",
+      "breakpoints": true
     }
   ]
 }
