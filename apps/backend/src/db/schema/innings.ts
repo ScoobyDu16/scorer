@@ -7,7 +7,9 @@ import {
   pgEnum,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { matches, teamEnum } from "./matches";
+import { relations } from "drizzle-orm";
+import { matches } from "./matches";
+import { teamEnum } from "./enums";
 
 /**
  * Innings status enum
@@ -54,3 +56,10 @@ export const innings = pgTable(
     };
   },
 );
+
+export const inningsRelations = relations(innings, ({ one }) => ({
+  match: one(matches, {
+    fields: [innings.matchId],
+    references: [matches.id],
+  }),
+}));

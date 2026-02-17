@@ -135,3 +135,12 @@ export const updateInningsStatusRepo = async (
     })
     .where(eq(innings.id, inningsId));
 };
+
+export const getMatchWithInningsRepo = async (matchId: string) => {
+  return db.query.matches.findFirst({
+    where: (m, { eq }) => eq(m.id, matchId),
+    with: {
+      innings: true,
+    },
+  });
+};

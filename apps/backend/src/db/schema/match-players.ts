@@ -5,8 +5,9 @@ import {
   boolean,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { matches, teamEnum } from "./matches";
+import { matches } from "./matches";
 import { players } from "./players";
+import { teamEnum } from "./enums";
 
 export const matchPlayers = pgTable(
   "match_players",

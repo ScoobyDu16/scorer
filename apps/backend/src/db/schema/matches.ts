@@ -6,21 +6,10 @@ import {
   timestamp,
   pgEnum,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { turfs } from "./turfs";
-
-/**
- * Enums
- */
-export const matchStatusEnum = pgEnum("match_status", [
-  "UPCOMING",
-  "LIVE",
-  "COMPLETED",
-  "ABANDONED",
-]);
-
-export const tossDecisionEnum = pgEnum("toss_decision", ["BAT", "BOWL"]);
-
-export const teamEnum = pgEnum("team", ["A", "B"]);
+import { innings } from "./innings";
+import { teamEnum, matchStatusEnum, tossDecisionEnum } from "./enums";
 
 /**
  * Matches table
@@ -54,3 +43,11 @@ export const matches = pgTable("matches", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const matchesRelations = relations(matches, ({ one, many }) => ({
+  turf: one(turfs, {
+    fields: [matches.turfId],
+    references: [turfs.id],
+  }),
+  innings: many(innings),
+}));

@@ -5,6 +5,7 @@ import {
   addMatchPlayersService,
   createMatchService,
   endInningsService,
+  getMatchScoreService,
   startInningsService,
   undoLastBallService,
 } from "./match.service";
@@ -90,5 +91,17 @@ export const endInnings = async (req: AuthRequest, res: Response) => {
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+export const getMatchScore = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+
+    const score = await getMatchScoreService(matchId);
+
+    res.json(score);
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
   }
 };

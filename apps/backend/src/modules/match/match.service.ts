@@ -7,6 +7,7 @@ import {
   getCurrentInningsRepo,
   getLastBallRepo,
   getMatchByIdRepo,
+  getMatchWithInningsRepo,
   revertInningsTotalsRepo,
   updateInningsStatusRepo,
   updateInningsTotalsRepo,
@@ -191,5 +192,23 @@ export const endInningsService = async (matchId: string) => {
 
   return {
     message: "Match completed",
+  };
+};
+
+export const getMatchScoreService = async (matchId: string) => {
+  const match = await getMatchWithInningsRepo(matchId);
+
+  if (!match) {
+    throw new Error("Match not found");
+  }
+
+  return {
+    matchId: match.id,
+    status: match.status,
+    currentInnings: match.currentInnings,
+    teamAName: match.teamAName,
+    teamBName: match.teamBName,
+    overs: match.overs,
+    innings: match.innings,
   };
 };
