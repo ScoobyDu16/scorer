@@ -29,6 +29,13 @@
       "when": 1771331094385,
       "tag": "0003_lame_bloodscream",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771331259013,
+      "tag": "0004_absent_bastion",
+      "breakpoints": true
     }
   ]
 }
