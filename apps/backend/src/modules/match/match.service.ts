@@ -1,4 +1,4 @@
-import { createMatchRepo } from "./match.repository";
+import { addMatchPlayersRepo, createMatchRepo } from "./match.repository";
 
 export const createMatchService = async (turfId: string, data: any) => {
   const match = await createMatchRepo({
@@ -13,4 +13,17 @@ export const createMatchService = async (turfId: string, data: any) => {
   });
 
   return match;
+};
+
+export const addMatchPlayersService = async (
+  matchId: string,
+  players: any[],
+) => {
+  const records = players.map((p) => ({
+    matchId,
+    playerId: p.playerId,
+    team: p.team,
+  }));
+
+  return addMatchPlayersRepo(records);
 };

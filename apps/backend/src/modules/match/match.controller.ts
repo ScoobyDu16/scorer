@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
-import { createMatchService } from "./match.service";
+import { addMatchPlayersService, createMatchService } from "./match.service";
 
 export const createMatch = async (req: AuthRequest, res: Response) => {
   try {
@@ -8,6 +8,25 @@ export const createMatch = async (req: AuthRequest, res: Response) => {
     const match = await createMatchService(turfId, req.body);
 
     res.status(201).json(match);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const addMatchPlayers = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchIdParam = req.params.matchId;
+
+    if (!matchIdParam || Array.isArray(matchIdParam)) {
+      return res.status(400).json({ message: "Invalid matchId" });
+    }
+
+    const matchId = matchIdParam;
+    const { players } = req.body;
+
+    const result = await addMatchPlayersService(matchId, players);
+
+    res.status(201).json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
