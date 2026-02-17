@@ -5,3 +5,4 @@ export * from "./matches";
 export * from "./match-players";
 export * from "./innings";
 export * from "./balls";
+export * from "./player-match-stats";
