@@ -22,6 +22,13 @@
       "when": 1771330961010,
       "tag": "0002_true_synch",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771331094385,
+      "tag": "0003_lame_bloodscream",
+      "breakpoints": true
     }
   ]
 }
