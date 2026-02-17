@@ -3,7 +3,10 @@ import {
   createBallRepo,
   createInningsRepo,
   createMatchRepo,
+  deleteBallRepo,
+  getLastBallRepo,
   getMatchByIdRepo,
+  revertInningsTotalsRepo,
   updateInningsTotalsRepo,
   updateMatchRepo,
 } from "./match.repository";
@@ -103,6 +106,30 @@ export const addBallService = async (matchId: string, data: any) => {
     data.isWicket,
     data.overNumber,
     data.ballNumber,
+  );
+
+  return ball;
+};
+
+export const undoLastBallService = async (matchId: string) => {
+  const ball = await getLastBallRepo(matchId);
+
+  if (!ball) {
+    throw new Error("No balls to undo");
+  }
+
+  const totalRuns = (ball.runs || 0) + (ball.extraRuns || 0);
+
+  // Delete ball
+  await deleteBallRepo(ball.id);
+
+  // Revert innings totals
+  await revertInningsTotalsRepo(
+    ball.inningsId,
+    totalRuns,
+    ball.isWicket,
+    ball.overNumber,
+    ball.ballNumber,
   );
 
   return ball;

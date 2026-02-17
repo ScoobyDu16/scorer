@@ -5,6 +5,7 @@ import {
   addMatchPlayersService,
   createMatchService,
   startInningsService,
+  undoLastBallService,
 } from "./match.service";
 
 export const createMatch = async (req: AuthRequest, res: Response) => {
@@ -61,5 +62,20 @@ export const addBall = async (req: AuthRequest, res: Response) => {
     res.status(201).json(ball);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const undoLastBall = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+
+    const ball = await undoLastBallService(matchId);
+
+    res.json({
+      message: "Last ball undone",
+      ball,
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
 };
