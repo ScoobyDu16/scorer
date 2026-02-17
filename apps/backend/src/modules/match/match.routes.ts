@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { authMiddleware } from "../../middleware/auth.middleware";
-import { addMatchPlayers, createMatch, startMatch } from "./match.controller";
+import {
+  addBall,
+  addMatchPlayers,
+  createMatch,
+  startMatch,
+} from "./match.controller";
 
 const router = Router();
 
@@ -11,5 +16,7 @@ router.post("/", authMiddleware, createMatch);
 router.post("/:matchId/players", authMiddleware, addMatchPlayers);
 
 router.post("/:matchId/start", authMiddleware, startMatch);
+
+router.post("/:matchId/balls", authMiddleware, addBall);
 
 export default router;

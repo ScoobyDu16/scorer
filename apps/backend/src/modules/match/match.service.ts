@@ -1,8 +1,10 @@
 import {
   addMatchPlayersRepo,
+  createBallRepo,
   createInningsRepo,
   createMatchRepo,
   getMatchByIdRepo,
+  updateInningsTotalsRepo,
   updateMatchRepo,
 } from "./match.repository";
 
@@ -72,4 +74,36 @@ export const startInningsService = async (matchId: string) => {
   });
 
   return inningsRecord;
+};
+
+export const addBallService = async (matchId: string, data: any) => {
+  const totalRuns = (data.runs || 0) + (data.extraRuns || 0);
+
+  // Save ball
+  const ball = await createBallRepo({
+    matchId,
+    inningsId: data.inningsId,
+    overNumber: data.overNumber,
+    ballNumber: data.ballNumber,
+    batsmanId: data.batsmanId,
+    bowlerId: data.bowlerId,
+    runs: data.runs,
+    extraType: data.extraType,
+    extraRuns: data.extraRuns,
+    isWicket: data.isWicket,
+    wicketType: data.wicketType,
+    dismissedPlayerId: data.dismissedPlayerId,
+    isLegalDelivery: data.isLegalDelivery,
+  });
+
+  // Update innings totals
+  await updateInningsTotalsRepo(
+    data.inningsId,
+    totalRuns,
+    data.isWicket,
+    data.overNumber,
+    data.ballNumber,
+  );
+
+  return ball;
 };

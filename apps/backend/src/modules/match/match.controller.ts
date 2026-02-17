@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import {
+  addBallService,
   addMatchPlayersService,
   createMatchService,
   startInningsService,
@@ -48,5 +49,17 @@ export const startMatch = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+export const addBall = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+
+    const ball = await addBallService(matchId, req.body);
+
+    res.status(201).json(ball);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
