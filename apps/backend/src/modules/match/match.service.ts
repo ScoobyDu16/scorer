@@ -4,9 +4,11 @@ import {
   createInningsRepo,
   createMatchRepo,
   deleteBallRepo,
+  getCurrentInningsRepo,
   getLastBallRepo,
   getMatchByIdRepo,
   revertInningsTotalsRepo,
+  updateInningsStatusRepo,
   updateInningsTotalsRepo,
   updateMatchRepo,
 } from "./match.repository";
@@ -133,4 +135,61 @@ export const undoLastBallService = async (matchId: string) => {
   );
 
   return ball;
+};
+
+export const endInningsService = async (matchId: string) => {
+  const match = await getMatchByIdRepo(matchId);
+
+  if (!match) {
+    throw new Error("Match not found");
+  }
+
+  const currentInningsNumber = match.currentInnings;
+
+  const currentInnings = await getCurrentInningsRepo(
+    matchId,
+    currentInningsNumber,
+  );
+
+  if (!currentInnings) {
+    throw new Error("Innings not found");
+  }
+
+  // Mark current innings completed
+  await updateInningsStatusRepo(currentInnings.id, "COMPLETED");
+
+  /**
+   * If first innings → start second
+   */
+  if (currentInningsNumber === 1) {
+    const nextBattingTeam = currentInnings.battingTeam === "A" ? "B" : "A";
+
+    const secondInnings = await createInningsRepo({
+      matchId,
+      inningsNumber: 2,
+      battingTeam: nextBattingTeam,
+      status: "LIVE",
+    });
+
+    await updateMatchRepo(matchId, {
+      currentInnings: 2,
+    });
+
+    return {
+      message: "Second innings started",
+      innings: secondInnings,
+    };
+  }
+
+  /**
+   * If second innings → finish match
+   */
+  await updateMatchRepo(matchId, {
+    status: "COMPLETED",
+    endTime: new Date(),
+  });
+
+  return {
+    message: "Match completed",
+  };
 };

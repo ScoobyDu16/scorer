@@ -4,6 +4,7 @@ import {
   addBall,
   addMatchPlayers,
   createMatch,
+  endInnings,
   startMatch,
   undoLastBall,
 } from "./match.controller";
@@ -21,5 +22,7 @@ router.post("/:matchId/start", authMiddleware, startMatch);
 router.post("/:matchId/balls", authMiddleware, addBall);
 
 router.delete("/:matchId/balls/last", authMiddleware, undoLastBall);
+
+router.post("/:matchId/end-innings", authMiddleware, endInnings);
 
 export default router;

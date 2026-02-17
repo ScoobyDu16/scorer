@@ -1,5 +1,5 @@
 import { balls } from "../../db/schema";
-import { sql, desc, eq } from "drizzle-orm";
+import { sql, desc, eq, and } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { innings, matches, matchPlayers } from "../../db/schema";
@@ -104,4 +104,34 @@ export const revertInningsTotalsRepo = async (
       updated_at = NOW()
     WHERE id = ${inningsId}
   `);
+};
+
+export const getCurrentInningsRepo = async (
+  matchId: string,
+  inningsNumber: number,
+) => {
+  const [record] = await db
+    .select()
+    .from(innings)
+    .where(
+      and(
+        eq(innings.matchId, matchId),
+        eq(innings.inningsNumber, inningsNumber),
+      ),
+    );
+
+  return record;
+};
+
+export const updateInningsStatusRepo = async (
+  inningsId: string,
+  status: "COMPLETED",
+) => {
+  await db
+    .update(innings)
+    .set({
+      status,
+      updatedAt: new Date(),
+    })
+    .where(eq(innings.id, inningsId));
 };
