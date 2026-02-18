@@ -57,6 +57,27 @@
       "when": 1771333086915,
       "tag": "0007_rainy_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771435953306,
+      "tag": "0008_amused_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771437297281,
+      "tag": "0009_peaceful_carnage",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771437540366,
+      "tag": "0010_crazy_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

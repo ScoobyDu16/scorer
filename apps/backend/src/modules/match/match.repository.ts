@@ -45,18 +45,18 @@ export const createBallRepo = async (data: any) => {
 export const updateInningsTotalsRepo = async (
   inningsId: string,
   runsToAdd: number,
-  wicket: boolean,
-  overNumber: number,
-  ballNumber: number,
+  isWicket: boolean,
+  isLegalDelivery: boolean,
 ) => {
-  const oversValue = `${overNumber}.${ballNumber}`;
+  const ballsIncrement = isLegalDelivery ? 1 : 0;
+  const wicketIncrement = isWicket ? 1 : 0;
 
   await db.execute(sql`
     UPDATE innings
     SET
       total_runs = total_runs + ${runsToAdd},
-      total_wickets = total_wickets + ${wicket ? 1 : 0},
-      total_overs = ${oversValue},
+      total_wickets = total_wickets + ${wicketIncrement},
+      total_balls = total_balls + ${ballsIncrement},
       updated_at = NOW()
     WHERE id = ${inningsId}
   `);
@@ -80,27 +80,18 @@ export const deleteBallRepo = async (ballId: string) => {
 export const revertInningsTotalsRepo = async (
   inningsId: string,
   runsToSubtract: number,
-  wicket: boolean,
-  overNumber: number,
-  ballNumber: number,
+  isWicket: boolean,
+  isLegalDelivery: boolean,
 ) => {
-  // Calculate previous ball
-  let prevOver = overNumber;
-  let prevBall = ballNumber - 1;
-
-  if (prevBall < 0) {
-    prevOver = overNumber - 1;
-    prevBall = 5;
-  }
-
-  const oversValue = prevOver >= 0 ? `${prevOver}.${prevBall}` : "0.0";
+  const ballsDecrement = isLegalDelivery ? 1 : 0;
+  const wicketDecrement = isWicket ? 1 : 0;
 
   await db.execute(sql`
     UPDATE innings
     SET
       total_runs = total_runs - ${runsToSubtract},
-      total_wickets = total_wickets - ${wicket ? 1 : 0},
-      total_overs = ${oversValue},
+      total_wickets = total_wickets - ${wicketDecrement},
+      total_balls = total_balls - ${ballsDecrement},
       updated_at = NOW()
     WHERE id = ${inningsId}
   `);

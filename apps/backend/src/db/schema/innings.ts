@@ -35,12 +35,7 @@ export const innings = pgTable(
     totalRuns: integer("total_runs").default(0).notNull(),
     totalWickets: integer("total_wickets").default(0).notNull(),
 
-    /**
-     * Example: 4.3 overs
-     */
-    totalOvers: decimal("total_overs", { precision: 4, scale: 1 })
-      .default("0.0")
-      .notNull(),
+    totalBalls: integer("total_balls").default(0).notNull(),
 
     status: inningsStatusEnum("status").default("LIVE").notNull(),
 

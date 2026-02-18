@@ -37,9 +37,8 @@ export const playerMatchStats = pgTable(
      * Bowling stats
      */
     wickets: integer("wickets").default(0).notNull(),
-    oversBowled: decimal("overs_bowled", { precision: 4, scale: 1 })
-      .default("0.0")
-      .notNull(),
+    ballsBowled: integer("balls_bowled").default(0).notNull(),
+
     runsConceded: integer("runs_conceded").default(0).notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),

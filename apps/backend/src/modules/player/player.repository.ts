@@ -51,7 +51,7 @@ export const getPlayerCareerStatsRepo = async (playerId: string) => {
       fours: sum(playerMatchStats.fours),
       sixes: sum(playerMatchStats.sixes),
       wickets: sum(playerMatchStats.wickets),
-      oversBowled: sum(playerMatchStats.oversBowled),
+      ballsBowled: sum(playerMatchStats.ballsBowled),
       runsConceded: sum(playerMatchStats.runsConceded),
     })
     .from(playerMatchStats)
@@ -126,13 +126,13 @@ export const updateBowlingStatsRepo = async (
   isWicket: boolean,
   isLegalDelivery: boolean,
 ) => {
-  const oversIncrement = isLegalDelivery ? 0.1 : 0;
+  const ballsIncrement = isLegalDelivery ? 1 : 0;
   const wickets = isWicket ? 1 : 0;
 
   await db.execute(sql`
     UPDATE player_match_stats
     SET
-      overs_bowled = overs_bowled + ${oversIncrement},
+      balls_bowled = balls_bowled + ${ballsIncrement},
       runs_conceded = runs_conceded + ${totalRuns},
       wickets = wickets + ${wickets}
     WHERE match_id = ${matchId}

@@ -1,3 +1,4 @@
+import { ballsToOvers } from "../../utils/cricket";
 import {
   createPlayerRepo,
   findPlayerByUniqueFields,
@@ -35,18 +36,34 @@ export const getPlayerCareerStatsService = async (playerId: string) => {
     throw new Error("Player stats not found");
   }
 
+  // Batting
+  const matches = Number(stats.matches || 0);
   const runs = Number(stats.runs || 0);
   const ballsFaced = Number(stats.ballsFaced || 0);
   const fours = Number(stats.fours || 0);
   const sixes = Number(stats.sixes || 0);
-  const wickets = Number(stats.wickets || 0);
-  const oversBowled = Number(stats.oversBowled || 0);
-  const runsConceded = Number(stats.runsConceded || 0);
-  const matches = Number(stats.matches || 0);
 
+  // Bowling
+  const wickets = Number(stats.wickets || 0);
+  const ballsBowled = Number(stats.ballsBowled || 0);
+  const runsConceded = Number(stats.runsConceded || 0);
+
+  /**
+   * Strike Rate
+   */
   const strikeRate = ballsFaced > 0 ? (runs / ballsFaced) * 100 : 0;
 
-  const economy = oversBowled > 0 ? runsConceded / oversBowled : 0;
+  /**
+   * Overs Bowled (derived)
+   */
+  const oversBowled = ballsToOvers(ballsBowled);
+
+  /**
+   * Economy
+   * Economy = runs per over
+   * = (runs / balls) * 6
+   */
+  const economy = ballsBowled > 0 ? (runsConceded / ballsBowled) * 6 : 0;
 
   return {
     playerId,
@@ -56,7 +73,8 @@ export const getPlayerCareerStatsService = async (playerId: string) => {
     fours,
     sixes,
     wickets,
-    oversBowled,
+    ballsBowled,
+    oversBowled: Number(oversBowled.toFixed(1)),
     runsConceded,
     strikeRate: Number(strikeRate.toFixed(2)),
     economy: Number(economy.toFixed(2)),

@@ -1,3 +1,4 @@
+import { ballsToOvers } from "../../utils/cricket";
 import {
   updateBattingStatsRepo,
   updateBowlingStatsRepo,
@@ -112,8 +113,7 @@ export const addBallService = async (matchId: string, data: any) => {
     data.inningsId,
     totalRuns,
     data.isWicket,
-    data.overNumber,
-    data.ballNumber,
+    data.isLegalDelivery,
   );
 
   /**
@@ -165,8 +165,7 @@ export const undoLastBallService = async (matchId: string) => {
     ball.inningsId,
     totalRuns,
     ball.isWicket,
-    ball.overNumber,
-    ball.ballNumber,
+    ball.isLegalDelivery,
   );
 
   return ball;
@@ -236,6 +235,16 @@ export const getMatchScoreService = async (matchId: string) => {
     throw new Error("Match not found");
   }
 
+  const innings = match.innings.map((i) => ({
+    id: i.id,
+    inningsNumber: i.inningsNumber,
+    battingTeam: i.battingTeam,
+    totalRuns: i.totalRuns,
+    totalWickets: i.totalWickets,
+    totalOvers: ballsToOvers(i.totalBalls),
+    status: i.status,
+  }));
+
   return {
     matchId: match.id,
     status: match.status,
@@ -243,6 +252,6 @@ export const getMatchScoreService = async (matchId: string) => {
     teamAName: match.teamAName,
     teamBName: match.teamBName,
     overs: match.overs,
-    innings: match.innings,
+    innings,
   };
 };

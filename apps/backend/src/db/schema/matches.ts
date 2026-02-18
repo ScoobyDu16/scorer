@@ -34,8 +34,6 @@ export const matches = pgTable("matches", {
   status: matchStatusEnum("status").default("UPCOMING").notNull(),
 
   currentInnings: integer("current_innings").default(1).notNull(),
-  currentOver: integer("current_over").default(0).notNull(),
-  currentBall: integer("current_ball").default(0).notNull(),
 
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
