@@ -1,4 +1,9 @@
 import {
+  updateBattingStatsRepo,
+  updateBowlingStatsRepo,
+  upsertPlayerMatchStatsRepo,
+} from "../player/player.repository";
+import {
   addMatchPlayersRepo,
   createBallRepo,
   createInningsRepo,
@@ -85,7 +90,7 @@ export const startInningsService = async (matchId: string) => {
 export const addBallService = async (matchId: string, data: any) => {
   const totalRuns = (data.runs || 0) + (data.extraRuns || 0);
 
-  // Save ball
+  // 1️⃣ Save ball
   const ball = await createBallRepo({
     matchId,
     inningsId: data.inningsId,
@@ -102,7 +107,7 @@ export const addBallService = async (matchId: string, data: any) => {
     isLegalDelivery: data.isLegalDelivery,
   });
 
-  // Update innings totals
+  // 2️⃣ Update innings totals
   await updateInningsTotalsRepo(
     data.inningsId,
     totalRuns,
@@ -110,6 +115,35 @@ export const addBallService = async (matchId: string, data: any) => {
     data.overNumber,
     data.ballNumber,
   );
+
+  /**
+   * 3️⃣ Update Player Stats
+   */
+
+  // Batting stats
+  if (data.batsmanId) {
+    await upsertPlayerMatchStatsRepo(matchId, data.batsmanId, data.battingTeam);
+
+    await updateBattingStatsRepo(
+      matchId,
+      data.batsmanId,
+      data.runs || 0,
+      data.isLegalDelivery,
+    );
+  }
+
+  // Bowling stats
+  if (data.bowlerId) {
+    await upsertPlayerMatchStatsRepo(matchId, data.bowlerId, data.bowlingTeam);
+
+    await updateBowlingStatsRepo(
+      matchId,
+      data.bowlerId,
+      totalRuns,
+      data.isWicket,
+      data.isLegalDelivery,
+    );
+  }
 
   return ball;
 };
