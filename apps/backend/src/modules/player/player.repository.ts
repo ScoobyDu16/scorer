@@ -1,6 +1,6 @@
 import { db } from "../../db/client";
 import { players } from "../../db/schema";
-import { eq, and, ilike, sum, count, sql } from "drizzle-orm";
+import { eq, and, ilike, sum, count, sql, inArray } from "drizzle-orm";
 import { playerMatchStats } from "../../db/schema";
 
 export const createPlayerRepo = async (data: any) => {
@@ -154,4 +154,10 @@ export const getPlayerByIdRepo = async (playerId: string) => {
     .where(eq(players.id, playerId));
 
   return player;
+};
+
+export const getPlayersByIdsRepo = async (ids: string[]) => {
+  if (!ids.length) return [];
+
+  return db.select().from(players).where(inArray(players.id, ids));
 };

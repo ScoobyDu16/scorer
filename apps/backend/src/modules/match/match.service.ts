@@ -1,7 +1,9 @@
 import { ballsToOvers, calculateRunRate } from "../../utils/cricket";
+import { getLastBallsRepo } from "../ball/balls.repository";
 import {
   getMatchPlayerStatsRepo,
   getPlayerByIdRepo,
+  getPlayersByIdsRepo,
   updateBattingStatsRepo,
   updateBowlingStatsRepo,
   upsertPlayerMatchStatsRepo,
@@ -300,6 +302,18 @@ export const getMatchScoreService = async (matchId: string) => {
         : 0;
   }
 
+  let live = null;
+
+  if (match.status === "LIVE") {
+    const currentInnings = match.innings.find(
+      (i) => i.inningsNumber === match.currentInnings,
+    );
+
+    if (currentInnings) {
+      live = await buildLiveScoreDetails(currentInnings.id);
+    }
+  }
+
   /**
    * ⭐ RESULT TEXT
    */
@@ -356,6 +370,8 @@ export const getMatchScoreService = async (matchId: string) => {
     manOfTheMatch,
 
     innings,
+
+    live,
   };
 };
 
@@ -510,4 +526,101 @@ export const checkInningsCompletionService = async (
    * If second innings → match result will be handled
    * by existing checkMatchResultService
    */
+};
+
+const buildLiveScoreDetails = async (inningsId: string) => {
+  // Get last 12 balls (enough to detect over + batsmen)
+  const recentBalls = await getLastBallsRepo(inningsId, 12);
+
+  if (!recentBalls.length) return null;
+
+  const lastBall = recentBalls[0];
+
+  const strikerId = lastBall.batsmanId;
+  const bowlerId = lastBall.bowlerId;
+
+  /**
+   * Determine non-striker
+   */
+  let nonStrikerId: string | null = null;
+
+  for (const ball of recentBalls) {
+    if (ball.batsmanId !== strikerId) {
+      nonStrikerId = ball.batsmanId;
+      break;
+    }
+  }
+
+  const playerIds = [strikerId, nonStrikerId, bowlerId].filter(
+    Boolean,
+  ) as string[];
+
+  const players = await getPlayersByIdsRepo(playerIds);
+
+  const playerMap = Object.fromEntries(players.map((p) => [p.id, p]));
+
+  /**
+   * Get match stats
+   */
+  const stats = await getMatchPlayerStatsRepo(lastBall.matchId);
+  const statsMap = Object.fromEntries(stats.map((s) => [s.playerId, s]));
+
+  /**
+   * Current batsmen
+   */
+  const strikerStats = statsMap[strikerId];
+  const nonStrikerStats = nonStrikerId ? statsMap[nonStrikerId] : null;
+
+  /**
+   * Bowler stats
+   */
+  const bowlerStats = statsMap[bowlerId];
+
+  /**
+   * Last over summary
+   */
+  const currentOverNumber = lastBall.overNumber;
+
+  const lastOverBalls = recentBalls
+    .filter((b) => b.overNumber === currentOverNumber)
+    .reverse();
+
+  const lastOver = lastOverBalls.map((b) => {
+    if (b.isWicket) return "W";
+    if (b.extraType === "WIDE") return "Wd";
+    if (b.extraType === "NO_BALL") return "Nb";
+    return String(b.runs + (b.extraRuns || 0));
+  });
+
+  return {
+    striker: strikerStats
+      ? {
+          id: strikerId,
+          name: playerMap[strikerId]?.name,
+          runs: strikerStats.runs,
+          balls: strikerStats.ballsFaced,
+        }
+      : null,
+
+    nonStriker: nonStrikerStats
+      ? {
+          id: nonStrikerId,
+          name: playerMap[nonStrikerId!]?.name,
+          runs: nonStrikerStats.runs,
+          balls: nonStrikerStats.ballsFaced,
+        }
+      : null,
+
+    bowler: bowlerStats
+      ? {
+          id: bowlerId,
+          name: playerMap[bowlerId]?.name,
+          overs: ballsToOvers(bowlerStats.ballsBowled),
+          runs: bowlerStats.runsConceded,
+          wickets: bowlerStats.wickets,
+        }
+      : null,
+
+    lastOver,
+  };
 };
