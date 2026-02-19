@@ -1,6 +1,7 @@
 import { ballsToOvers, calculateRunRate } from "../../utils/cricket";
 import { hasUsedAccessCodeForMatchRepo } from "../access-code/access-code.repository";
 import { getLastBallsRepo } from "../ball/balls.repository";
+import { matchServiceLogger } from "../../utils/business-logger";
 import {
   getMatchPlayerStatsRepo,
   getPlayerByIdRepo,
@@ -267,12 +268,17 @@ export const endInningsService = async (matchId: string) => {
 };
 
 export const getMatchScoreService = async (matchId: string) => {
+  matchServiceLogger.fetching('match score', matchId);
+  
   const match = await getMatchWithInningsRepo(matchId);
-
+  
   if (!match) {
+    matchServiceLogger.error('fetching match score', new Error('Match not found'), { matchId });
     throw new Error("Match not found");
   }
 
+  matchServiceLogger.found('match', match, { matchId });
+  
   const innings = match.innings.map((i) => ({
     id: i.id,
     inningsNumber: i.inningsNumber,
