@@ -129,9 +129,19 @@ export const updateInningsStatusRepo = async (
 
 export const getMatchWithInningsRepo = async (matchId: string) => {
   return db.query.matches.findFirst({
-    where: (m, { eq }) => eq(m.id, matchId),
+    where: eq(matches.id, matchId),
     with: {
       innings: true,
     },
   });
+};
+
+export const completeMatchRepo = async (matchId: string) => {
+  await db
+    .update(matches)
+    .set({
+      status: "COMPLETED",
+      endTime: new Date(),
+    })
+    .where(eq(matches.id, matchId));
 };
