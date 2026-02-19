@@ -139,3 +139,19 @@ export const updateBowlingStatsRepo = async (
       AND player_id = ${playerId}
   `);
 };
+
+export const getMatchPlayerStatsRepo = async (matchId: string) => {
+  return db
+    .select()
+    .from(playerMatchStats)
+    .where(eq(playerMatchStats.matchId, matchId));
+};
+
+export const getPlayerByIdRepo = async (playerId: string) => {
+  const [player] = await db
+    .select()
+    .from(players)
+    .where(eq(players.id, playerId));
+
+  return player;
+};

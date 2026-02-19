@@ -9,7 +9,13 @@ import {
 import { relations } from "drizzle-orm";
 import { turfs } from "./turfs";
 import { innings } from "./innings";
-import { teamEnum, matchStatusEnum, tossDecisionEnum } from "./enums";
+import {
+  teamEnum,
+  matchStatusEnum,
+  tossDecisionEnum,
+  resultTypeEnum,
+} from "./enums";
+import { players } from "./players";
 
 /**
  * Matches table
@@ -34,6 +40,16 @@ export const matches = pgTable("matches", {
   status: matchStatusEnum("status").default("UPCOMING").notNull(),
 
   currentInnings: integer("current_innings").default(1).notNull(),
+
+  winner: teamEnum("winner"),
+
+  resultType: resultTypeEnum("result_type"),
+
+  resultMargin: integer("result_margin"),
+
+  manOfTheMatchPlayerId: uuid("man_of_the_match_player_id").references(
+    () => players.id,
+  ),
 
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),

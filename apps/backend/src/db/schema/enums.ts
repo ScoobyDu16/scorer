@@ -14,3 +14,5 @@ export const inningsStatusEnum = pgEnum("innings_status", [
   "LIVE",
   "COMPLETED",
 ]);
+
+export const resultTypeEnum = pgEnum("result_type", ["RUNS", "WICKETS", "TIE"]);
