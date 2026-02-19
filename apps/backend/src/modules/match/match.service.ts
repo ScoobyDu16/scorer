@@ -160,6 +160,8 @@ export const addBallService = async (matchId: string, data: any) => {
     );
   }
 
+  await checkInningsCompletionService(matchId, data.inningsId);
+
   // 5️⃣ ⭐ Check match result
   await checkMatchResultService(matchId);
 
@@ -458,4 +460,54 @@ const calculateManOfTheMatch = async (matchId: string) => {
   }
 
   return bestPlayerId;
+};
+
+export const checkInningsCompletionService = async (
+  matchId: string,
+  inningsId: string,
+) => {
+  const match = await getMatchByIdRepo(matchId);
+  if (!match) throw new Error("Match not found");
+
+  const innings = await getCurrentInningsRepo(matchId, match.currentInnings);
+
+  if (!innings) return;
+
+  // Already completed
+  if (innings.status === "COMPLETED") return;
+
+  const maxBalls = match.overs * 6;
+
+  const isCompleted =
+    innings.totalBalls >= maxBalls || innings.totalWickets >= 10;
+
+  if (!isCompleted) return;
+
+  /**
+   * Complete current innings
+   */
+  await updateInningsStatusRepo(innings.id, "COMPLETED");
+
+  /**
+   * If first innings → start second
+   */
+  if (innings.inningsNumber === 1) {
+    const nextBattingTeam = innings.battingTeam === "A" ? "B" : "A";
+
+    await createInningsRepo({
+      matchId,
+      inningsNumber: 2,
+      battingTeam: nextBattingTeam,
+      status: "LIVE",
+    });
+
+    await updateMatchRepo(matchId, {
+      currentInnings: 2,
+    });
+  }
+
+  /**
+   * If second innings → match result will be handled
+   * by existing checkMatchResultService
+   */
 };
