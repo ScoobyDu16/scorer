@@ -1,3 +1,4 @@
+import { getMatchByIdRepo } from "../match/match.repository";
 import {
   createAccessCodeRepo,
   findValidAccessCodeRepo,
@@ -11,14 +12,32 @@ const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-export const generateAccessCodeService = async (turfId: string) => {
+export const generateAccessCodeService = async (matchId: string) => {
+  /**
+   * 1️⃣ Get match to fetch turfId
+   */
+  const match = await getMatchByIdRepo(matchId);
+
+  if (!match) {
+    throw new Error("Match not found");
+  }
+
+  const turfId = match.turfId;
+
+  /**
+   * 2️⃣ Generate code
+   */
   const code = generateCode();
 
   const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 10); // valid for 10 minutes
+  expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
+  /**
+   * 3️⃣ Save access code with matchId
+   */
   const record = await createAccessCodeRepo({
     turfId,
+    matchId,
     code,
     expiresAt,
   });
@@ -27,16 +46,15 @@ export const generateAccessCodeService = async (turfId: string) => {
 };
 
 export const validateAccessCodeService = async (
-  turfId: string,
+  matchId: string,
   code: string,
 ) => {
-  const record = await findValidAccessCodeRepo(turfId, code);
+  const record = await findValidAccessCodeRepo(matchId, code);
 
   if (!record) {
     throw new Error("Invalid or expired code");
   }
 
-  // mark as used (one-time use)
   await markAccessCodeUsedRepo(record.id);
 
   return record;

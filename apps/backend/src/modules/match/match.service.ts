@@ -1,4 +1,5 @@
 import { ballsToOvers, calculateRunRate } from "../../utils/cricket";
+import { hasUsedAccessCodeForMatchRepo } from "../access-code/access-code.repository";
 import { getLastBallsRepo } from "../ball/balls.repository";
 import {
   getMatchPlayerStatsRepo,
@@ -54,6 +55,9 @@ export const addMatchPlayersService = async (
 };
 
 export const startInningsService = async (matchId: string) => {
+  /**
+   * 1️⃣ Get match
+   */
   const match = await getMatchByIdRepo(matchId);
 
   if (!match) {
@@ -65,7 +69,18 @@ export const startInningsService = async (matchId: string) => {
   }
 
   /**
-   * Determine batting team
+   * 2️⃣ ⭐ Access Code Validation Check (NEW)
+   */
+  const hasValidAccess = await hasUsedAccessCodeForMatchRepo(matchId);
+
+  if (!hasValidAccess) {
+    throw new Error(
+      "Access code validation required before starting this match",
+    );
+  }
+
+  /**
+   * 3️⃣ Determine batting team
    */
   let battingTeam: "A" | "B";
 
@@ -75,7 +90,9 @@ export const startInningsService = async (matchId: string) => {
     battingTeam = match.tossWinner === "A" ? "B" : "A";
   }
 
-  // Create first innings
+  /**
+   * 4️⃣ Create first innings
+   */
   const inningsRecord = await createInningsRepo({
     matchId,
     inningsNumber: 1,
@@ -83,7 +100,9 @@ export const startInningsService = async (matchId: string) => {
     status: "LIVE",
   });
 
-  // Update match
+  /**
+   * 5️⃣ Update match
+   */
   await updateMatchRepo(matchId, {
     status: "LIVE",
     currentInnings: 1,

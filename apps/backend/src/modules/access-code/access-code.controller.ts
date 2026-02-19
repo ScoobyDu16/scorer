@@ -10,12 +10,13 @@ import {
  */
 export const generateAccessCode = async (req: AuthRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
-    const code = await generateAccessCodeService(turfId);
+    const { matchId } = req.body;
 
-    res.status(201).json(code);
+    const record = await generateAccessCodeService(matchId);
+
+    res.json(record);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -24,12 +25,19 @@ export const generateAccessCode = async (req: AuthRequest, res: Response) => {
  */
 export const validateAccessCode = async (req: any, res: Response) => {
   try {
-    const { turfId, code } = req.body;
+    const { matchId, code } = req.body;
 
-    const record = await validateAccessCodeService(turfId, code);
+    if (!matchId || !code) {
+      return res.status(400).json({
+        message: "matchId and code are required",
+      });
+    }
+
+    const record = await validateAccessCodeService(matchId, code);
 
     res.json({
       message: "Code valid",
+      matchId: record.matchId,
       turfId: record.turfId,
     });
   } catch (error: any) {

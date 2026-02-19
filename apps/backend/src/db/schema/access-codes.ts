@@ -7,6 +7,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { turfs } from "./turfs";
+import { matches } from "./matches";
 
 export const accessCodes = pgTable(
   "access_codes",
@@ -22,6 +23,10 @@ export const accessCodes = pgTable(
     expiresAt: timestamp("expires_at").notNull(),
 
     isUsed: boolean("is_used").default(false).notNull(),
+
+    matchId: uuid("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
