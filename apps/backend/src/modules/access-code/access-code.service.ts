@@ -3,6 +3,7 @@ import {
   createAccessCodeRepo,
   findValidAccessCodeRepo,
   markAccessCodeUsedRepo,
+  getMatchesWithActiveCodesRepo,
 } from "./access-code.repository";
 
 /**
@@ -58,4 +59,16 @@ export const validateAccessCodeService = async (
   await markAccessCodeUsedRepo(record.id);
 
   return record;
+};
+
+export const getMatchesWithoutActiveCodesService = async (matches: any[]) => {
+  const matchIds = matches.map(match => match.id);
+  
+  if (matchIds.length === 0) {
+    return matches;
+  }
+
+  const activeCodeMatchIds = await getMatchesWithActiveCodesRepo(matchIds);
+  
+  return matches.filter(match => !activeCodeMatchIds.includes(match.id));
 };

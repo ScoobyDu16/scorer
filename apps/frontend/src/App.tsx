@@ -5,6 +5,9 @@ import { PublicRoute } from './components/PublicRoute';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
 import { PlayersPage } from './pages/PlayersPage';
+import { CreateMatchPage } from './pages/CreateMatchPage';
+import { GenerateAccessCodePage } from './pages/GenerateAccessCodePage';
+import { AccessCodePage } from './pages/AccessCodePage';
 
 function App() {
   return (
@@ -26,6 +29,9 @@ function App() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/players" element={<PlayersPage />} />
+                <Route path="/create-match" element={<CreateMatchPage />} />
+                <Route path="/generate-code" element={<GenerateAccessCodePage />} />
+                <Route path="/access-code" element={<AccessCodePage />} />
               </Routes>
             </ProtectedRoute>
           }

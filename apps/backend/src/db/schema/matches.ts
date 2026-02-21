@@ -51,6 +51,8 @@ export const matches = pgTable("matches", {
     () => players.id,
   ),
 
+  playersPerTeam: integer("players_per_team").default(11).notNull(),
+
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
 

@@ -27,6 +27,7 @@ import {
   updateInningsTotalsRepo,
   updateMatchRepo,
 } from "./match.repository";
+import { getMatchesWithoutActiveCodesService } from "../access-code/access-code.service";
 
 export const createMatchService = async (turfId: string, data: any) => {
   const match = await createMatchRepo({
@@ -38,13 +39,15 @@ export const createMatchService = async (turfId: string, data: any) => {
     tossWinner: data.tossWinner,
     tossDecision: data.tossDecision,
     status: "UPCOMING",
+    playersPerTeam: data.playersPerTeam || 11, // Default to 11 players per team
   });
 
   return match;
 };
 
 export const getMatchesService = async (turfId: string) => {
-  return getMatchesByTurfRepo(turfId);
+  const allMatches = await getMatchesByTurfRepo(turfId);
+  return getMatchesWithoutActiveCodesService(allMatches);
 };
 
 export const addMatchPlayersService = async (

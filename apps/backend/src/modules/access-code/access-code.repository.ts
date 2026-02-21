@@ -1,6 +1,6 @@
 import { db } from "../../db/client";
 import { accessCodes } from "../../db/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, inArray } from "drizzle-orm";
 
 export const createAccessCodeRepo = async (data: {
   turfId: string;
@@ -32,6 +32,23 @@ export const findValidAccessCodeRepo = async (
     );
 
   return record;
+};
+
+export const getMatchesWithActiveCodesRepo = async (matchIds: string[]) => {
+  const now = new Date();
+  
+  const activeCodes = await db
+    .select({ matchId: accessCodes.matchId })
+    .from(accessCodes)
+    .where(
+      and(
+        inArray(accessCodes.matchId, matchIds),
+        eq(accessCodes.isUsed, false),
+        gt(accessCodes.expiresAt, now),
+      ),
+    );
+
+  return activeCodes.map(code => code.matchId);
 };
 
 export const markAccessCodeUsedRepo = async (id: string) => {

@@ -60,6 +60,18 @@ export const playerAPI = {
   },
 };
 
+export const accessCodeAPI = {
+  generateAccessCode: async (matchId: string) => {
+    const response = await api.post('/access-codes/generate', { matchId });
+    return response.data;
+  },
+
+  validateAccessCode: async (matchId: string, code: string) => {
+    const response = await api.post('/access-codes/validate', { matchId, code });
+    return response.data;
+  },
+};
+
 export const matchAPI = {
   getMatches: async (): Promise<Match[]> => {
     const response = await api.get('/matches');
