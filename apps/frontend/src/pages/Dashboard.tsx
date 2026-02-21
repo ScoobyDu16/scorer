@@ -1,7 +1,6 @@
-import React from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { PlayersList } from '../components/PlayersList';
-import { MatchesList } from '../components/MatchesList';
+import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { DashboardStats } from '../components/DashboardStats';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -30,13 +29,43 @@ export const Dashboard: React.FC = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0 space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-gray-600">
+              Welcome back, {user?.name}! Here's an overview of your cricket scoring activities.
+            </p>
+          </div>
+          
+          <div className="space-y-8">
             <div>
-              <PlayersList />
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Overview</h2>
+              <DashboardStats />
             </div>
-            <div>
-              <MatchesList />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Create Match
+                </h3>
+                <p className="text-gray-600">Start a new cricket match</p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Manage Players
+                </h3>
+                <p className="text-gray-600">
+                  Add and manage player profiles
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  View Statistics
+                </h3>
+                <p className="text-gray-600">
+                  Check player and match statistics
+                </p>
+              </div>
             </div>
           </div>
         </div>

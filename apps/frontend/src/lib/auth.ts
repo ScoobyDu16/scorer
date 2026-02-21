@@ -59,6 +59,16 @@ export const matchAPI = {
   },
 };
 
+export const dashboardAPI = {
+  getStats: async (): Promise<{
+    totalPlayers: number;
+    totalMatches: number;
+  }> => {
+    const response = await api.get('/dashboard');
+    return response.data;
+  },
+};
+
 export const setAuthToken = (token: string) => {
   localStorage.setItem('token', token);
 };
