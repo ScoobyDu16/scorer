@@ -2,8 +2,24 @@ import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import {
   generateAccessCodeService,
+  getAccessCodeByMatchIdService,
   validateAccessCodeService,
 } from "./access-code.service";
+
+/**
+ * Get access code for a match
+ */
+export const getAccessCodeByMatchId = async (req: AuthRequest, res: Response) => {
+  try {
+    const { matchId } = req.params;
+
+    const record = await getAccessCodeByMatchIdService(matchId as string);
+
+    res.json(record);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
 /**
  * Owner generates code

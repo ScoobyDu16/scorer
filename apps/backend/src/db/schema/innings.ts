@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { matches } from "./matches";
+import { players } from "./players";
 import { teamEnum } from "./enums";
 
 /**
@@ -36,6 +37,10 @@ export const innings = pgTable(
     totalWickets: integer("total_wickets").default(0).notNull(),
 
     totalBalls: integer("total_balls").default(0).notNull(),
+
+    openingStrikerId: uuid("opening_striker_id").references(() => players.id, { onDelete: "set null" }),
+    
+    openingNonStrikerId: uuid("opening_non_striker_id").references(() => players.id, { onDelete: "set null" }),
 
     status: inningsStatusEnum("status").default("LIVE").notNull(),
 

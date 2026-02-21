@@ -25,6 +25,10 @@ export const createPlayerService = async (turfId: string, data: any) => {
   return player;
 };
 
+export const getAllPlayersService = async (turfId: string) => {
+  return getPlayersRepo(turfId);
+};
+
 export const getPlayersService = async (turfId: string, search?: string) => {
   return getPlayersRepo(turfId, search);
 };

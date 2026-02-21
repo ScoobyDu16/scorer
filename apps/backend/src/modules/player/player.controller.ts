@@ -2,9 +2,20 @@ import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import {
   createPlayerService,
+  getAllPlayersService,
   getPlayerCareerStatsService,
   getPlayersService,
 } from "./player.service";
+
+export const getAllPlayers = async (req: AuthRequest, res: Response) => {
+  try {
+    const turfId = req.turfId!;
+    const players = await getAllPlayersService(turfId);
+    res.json(players);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const createPlayer = async (req: AuthRequest, res: Response) => {
   try {

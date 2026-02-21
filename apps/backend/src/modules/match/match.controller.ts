@@ -6,10 +6,31 @@ import {
   addMatchPlayersService,
   createMatchService,
   endInningsService,
+  getMatchDetailsService,
+  getMatchPlayersService,
   getMatchScoreService,
+  setOpeningPlayersService,
   startInningsService,
+  startInningsWithPlayersService,
   undoLastBallService,
 } from "./match.service";
+
+export const getMatchDetails = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    
+    businessLogger.fetching('match details', `match-id ${matchId}`);
+    
+    const match = await getMatchDetailsService(matchId);
+    
+    businessLogger.found('match', match, { matchId });
+    
+    res.json(match);
+  } catch (error: any) {
+    businessLogger.error('fetching match details', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const getMatchScore = async (req: AuthRequest, res: Response) => {
   try {
@@ -66,6 +87,23 @@ export const addMatchPlayers = async (req: AuthRequest, res: Response) => {
     res.status(201).json(result);
   } catch (error: any) {
     businessLogger.error('adding players to match', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMatchPlayers = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+
+    businessLogger.fetching('match players', `match-id ${matchId}`);
+    
+    const players = await getMatchPlayersService(matchId);
+    
+    businessLogger.found('match players', players, { matchId });
+    
+    res.json(players);
+  } catch (error: any) {
+    businessLogger.error('fetching match players', error, { matchId: req.params.matchId });
     res.status(500).json({ message: error.message });
   }
 };
@@ -140,6 +178,45 @@ export const endInnings = async (req: AuthRequest, res: Response) => {
     res.json(result);
   } catch (error: any) {
     businessLogger.error('ending innings', error, { matchId: req.params.matchId as string });
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const startInningsWithPlayers = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    const { strikerId, nonStrikerId, bowlerId } = req.body;
+    
+    businessLogger.start('starting innings with players', { matchId, strikerId, nonStrikerId, bowlerId });
+    
+    const innings = await startInningsWithPlayersService(matchId, { strikerId, nonStrikerId, bowlerId });
+    
+    businessLogger.success('innings started with players', { matchId, inningsId: innings.id });
+    
+    res.json({
+      message: "Innings started with opening players",
+      innings,
+    });
+  } catch (error: any) {
+    businessLogger.error('starting innings with players', error, { matchId: req.params.matchId as string });
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const setOpeningPlayers = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    const { strikerId, nonStrikerId } = req.body;
+    
+    businessLogger.start('setting opening players', { matchId, strikerId, nonStrikerId });
+    
+    const result = await setOpeningPlayersService(matchId, { strikerId, nonStrikerId });
+    
+    businessLogger.success('opening players set', { matchId, strikerId, nonStrikerId });
+    
+    res.json(result);
+  } catch (error: any) {
+    businessLogger.error('setting opening players', error, { matchId: req.params.matchId as string });
     res.status(400).json({ message: error.message });
   }
 };

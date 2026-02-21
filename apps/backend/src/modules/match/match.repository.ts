@@ -114,6 +114,16 @@ export const getCurrentInningsRepo = async (
   return record;
 };
 
+export const updateInningsRepo = async (inningsId: string, data: any) => {
+  const [updatedInnings] = await db
+    .update(innings)
+    .set(data)
+    .where(eq(innings.id, inningsId))
+    .returning();
+  
+  return updatedInnings;
+};
+
 export const updateInningsStatusRepo = async (
   inningsId: string,
   status: "COMPLETED",

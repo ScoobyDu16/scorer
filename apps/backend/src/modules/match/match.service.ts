@@ -3,16 +3,7 @@ import { hasUsedAccessCodeForMatchRepo } from "../access-code/access-code.reposi
 import { getLastBallsRepo } from "../ball/balls.repository";
 import { matchServiceLogger } from "../../utils/business-logger";
 import {
-  getMatchPlayerStatsRepo,
-  getPlayerByIdRepo,
-  getPlayersByIdsRepo,
-  updateBattingStatsRepo,
-  updateBowlingStatsRepo,
-  upsertPlayerMatchStatsRepo,
-} from "../player/player.repository";
-import {
   addMatchPlayersRepo,
-  completeMatchRepo,
   createBallRepo,
   createInningsRepo,
   createMatchRepo,
@@ -22,10 +13,39 @@ import {
   getMatchByIdRepo,
   getMatchWithInningsRepo,
   revertInningsTotalsRepo,
+  updateInningsRepo,
   updateInningsStatusRepo,
   updateInningsTotalsRepo,
   updateMatchRepo,
 } from "./match.repository";
+import {
+  getMatchPlayersRepo,
+  getMatchPlayerStatsRepo,
+  getPlayerByIdRepo,
+  getPlayersByIdsRepo,
+  updateBattingStatsRepo,
+  updateBowlingStatsRepo,
+  upsertPlayerMatchStatsRepo,
+} from "../player/player.repository";
+
+export const getMatchDetailsService = async (matchId: string) => {
+  matchServiceLogger.fetching("match details", matchId);
+
+  const match = await getMatchByIdRepo(matchId);
+
+  if (!match) {
+    matchServiceLogger.error(
+      "fetching match details",
+      new Error("Match not found"),
+      { matchId },
+    );
+    throw new Error("Match not found");
+  }
+
+  matchServiceLogger.found("match", match, { matchId });
+
+  return match;
+};
 
 export const createMatchService = async (turfId: string, data: any) => {
   const match = await createMatchRepo({
@@ -33,11 +53,15 @@ export const createMatchService = async (turfId: string, data: any) => {
     teamAName: data.teamAName,
     teamBName: data.teamBName,
     overs: data.overs,
+    playersPerTeam: data.playersPerTeam,
     venue: data.venue,
     tossWinner: data.tossWinner,
     tossDecision: data.tossDecision,
     status: "UPCOMING",
+    currentInnings: 1,
   });
+
+  matchServiceLogger.created("match", match.id, { turfId });
 
   return match;
 };
@@ -53,6 +77,10 @@ export const addMatchPlayersService = async (
   }));
 
   return addMatchPlayersRepo(records);
+};
+
+export const getMatchPlayersService = async (matchId: string) => {
+  return await getMatchPlayersRepo(matchId);
 };
 
 export const startInningsService = async (matchId: string) => {
@@ -113,6 +141,80 @@ export const startInningsService = async (matchId: string) => {
   return inningsRecord;
 };
 
+export const startInningsWithPlayersService = async (
+  matchId: string,
+  data: { strikerId: string; nonStrikerId: string; bowlerId: string },
+) => {
+  const match = await getMatchByIdRepo(matchId);
+
+  if (!match) {
+    throw new Error("Match not found");
+  }
+
+  if (match.status !== "UPCOMING") {
+    throw new Error("Match has already started");
+  }
+
+  // Determine batting team based on toss
+  let battingTeam: "A" | "B";
+  if (!match.tossWinner) {
+    throw new Error("Toss winner not set");
+  }
+
+  if (match.tossDecision === "BAT") {
+    battingTeam = match.tossWinner;
+  } else {
+    battingTeam = match.tossWinner === "A" ? "B" : "A";
+  }
+
+  // Create innings with opening players
+  const inningsRecord = await createInningsRepo({
+    matchId,
+    inningsNumber: 1,
+    battingTeam,
+    status: "LIVE",
+    openingStrikerId: data.strikerId,
+    openingNonStrikerId: data.nonStrikerId,
+  });
+
+  // Update match status
+  await updateMatchRepo(matchId, {
+    status: "LIVE",
+    currentInnings: 1,
+    startTime: new Date(),
+  });
+
+  return inningsRecord;
+};
+
+export const setOpeningPlayersService = async (
+  matchId: string,
+  data: { strikerId: string; nonStrikerId: string },
+) => {
+  const match = await getMatchByIdRepo(matchId);
+
+  if (!match) {
+    throw new Error("Match not found");
+  }
+
+  const currentInnings = await getCurrentInningsRepo(
+    matchId,
+    match.currentInnings,
+  );
+
+  if (!currentInnings) {
+    throw new Error("Innings not found");
+  }
+
+  // Update innings with opening players
+  const updatedInnings = await updateInningsRepo(currentInnings.id, {
+    openingStrikerId: data.strikerId,
+    openingNonStrikerId: data.nonStrikerId,
+  });
+
+  return updatedInnings;
+};
+
 export const addBallService = async (matchId: string, data: any) => {
   const match = await getMatchByIdRepo(matchId);
 
@@ -130,14 +232,35 @@ export const addBallService = async (matchId: string, data: any) => {
     throw new Error("Innings already completed");
   }
 
+  // Calculate over and ball numbers
+  const lastBall = await getLastBallRepo(matchId);
+  let overNumber = 1;
+  let ballNumber = 1;
+
+  if (lastBall) {
+    if (lastBall.ballNumber < 6) {
+      // Same over, next ball
+      overNumber = lastBall.overNumber;
+      ballNumber = lastBall.ballNumber + 1;
+    } else {
+      // Next over
+      overNumber = lastBall.overNumber + 1;
+      ballNumber = 1;
+    }
+  }
+
   const totalRuns = (data.runs || 0) + (data.extraRuns || 0);
+
+  // Determine batting and bowling teams
+  const battingTeam = innings.battingTeam;
+  const bowlingTeam = battingTeam === "A" ? "B" : "A";
 
   // 1️⃣ Save ball
   const ball = await createBallRepo({
     matchId,
-    inningsId: data.inningsId,
-    overNumber: data.overNumber,
-    ballNumber: data.ballNumber,
+    inningsId: innings.id,
+    overNumber,
+    ballNumber,
     batsmanId: data.batsmanId,
     bowlerId: data.bowlerId,
     runs: data.runs,
@@ -151,7 +274,7 @@ export const addBallService = async (matchId: string, data: any) => {
 
   // 2️⃣ Update innings totals
   await updateInningsTotalsRepo(
-    data.inningsId,
+    innings.id,
     totalRuns,
     data.isWicket,
     data.isLegalDelivery,
@@ -159,7 +282,7 @@ export const addBallService = async (matchId: string, data: any) => {
 
   // 3️⃣ Batting stats
   if (data.batsmanId) {
-    await upsertPlayerMatchStatsRepo(matchId, data.batsmanId, data.battingTeam);
+    await upsertPlayerMatchStatsRepo(matchId, data.batsmanId, battingTeam);
 
     await updateBattingStatsRepo(
       matchId,
@@ -171,7 +294,7 @@ export const addBallService = async (matchId: string, data: any) => {
 
   // 4️⃣ Bowling stats
   if (data.bowlerId) {
-    await upsertPlayerMatchStatsRepo(matchId, data.bowlerId, data.bowlingTeam);
+    await upsertPlayerMatchStatsRepo(matchId, data.bowlerId, bowlingTeam);
 
     await updateBowlingStatsRepo(
       matchId,
@@ -268,17 +391,21 @@ export const endInningsService = async (matchId: string) => {
 };
 
 export const getMatchScoreService = async (matchId: string) => {
-  matchServiceLogger.fetching('match score', matchId);
-  
+  matchServiceLogger.fetching("match score", matchId);
+
   const match = await getMatchWithInningsRepo(matchId);
-  
+
   if (!match) {
-    matchServiceLogger.error('fetching match score', new Error('Match not found'), { matchId });
+    matchServiceLogger.error(
+      "fetching match score",
+      new Error("Match not found"),
+      { matchId },
+    );
     throw new Error("Match not found");
   }
 
-  matchServiceLogger.found('match', match, { matchId });
-  
+  matchServiceLogger.found("match", match, { matchId });
+
   const innings = match.innings.map((i) => ({
     id: i.id,
     inningsNumber: i.inningsNumber,
@@ -561,51 +688,86 @@ const buildLiveScoreDetails = async (inningsId: string) => {
 
   const lastBall = recentBalls[0];
 
-  const strikerId = lastBall.batsmanId;
-  const bowlerId = lastBall.bowlerId;
+  // Group balls by over to analyze strike rotation
+  const ballsByOver = recentBalls.reduce(
+    (acc, ball) => {
+      if (!acc[ball.overNumber]) acc[ball.overNumber] = [];
+      acc[ball.overNumber].push(ball);
+      return acc;
+    },
+    {} as Record<number, typeof recentBalls>,
+  );
 
-  /**
-   * Determine non-striker
-   */
-  let nonStrikerId: string | null = null;
+  // Get current over number
+  const currentOverNumber = lastBall.overNumber;
+  const currentOverBalls = ballsByOver[currentOverNumber] || [];
 
-  for (const ball of recentBalls) {
-    if (ball.batsmanId !== strikerId) {
-      nonStrikerId = ball.batsmanId;
-      break;
-    }
+  // Apply cricket rules to determine current striker/non-striker
+  let strikerId: string;
+  let nonStrikerId: string;
+  let bowlerId: string;
+
+  // Start with opening players if available
+  const innings = await getCurrentInningsRepo(lastBall.matchId, 1); // Assuming first innings for now
+  if (innings?.openingStrikerId && innings?.openingNonStrikerId) {
+    strikerId = innings.openingStrikerId;
+    nonStrikerId = innings.openingNonStrikerId;
+  } else {
+    // Fallback to last ball logic if no opening players
+    strikerId = lastBall.batsmanId;
+    nonStrikerId =
+      recentBalls.find((b) => b.batsmanId !== strikerId)?.batsmanId || "";
   }
+
+  // Process each over to apply strike rotation rules
+  Object.keys(ballsByOver).forEach((overNum) => {
+    const overBalls = ballsByOver[parseInt(overNum)];
+    let currentStriker = strikerId;
+    let currentNonStriker = nonStrikerId;
+
+    overBalls.forEach((ball) => {
+      // Only process legal deliveries for strike rotation
+      if (ball.isLegalDelivery) {
+        const totalRuns = ball.runs + (ball.extraRuns || 0);
+
+        // Strike rotation on odd runs
+        if (totalRuns % 2 === 1) {
+          // Swap striker and non-striker
+          [currentStriker, currentNonStriker] = [
+            currentNonStriker,
+            currentStriker,
+          ];
+        }
+      }
+    });
+
+    // Update striker/non-striker for next over
+    strikerId = currentStriker;
+    nonStrikerId = currentNonStriker;
+  });
+
+  // Current bowler is from last ball
+  bowlerId = lastBall.bowlerId;
 
   const playerIds = [strikerId, nonStrikerId, bowlerId].filter(
     Boolean,
   ) as string[];
 
   const players = await getPlayersByIdsRepo(playerIds);
-
   const playerMap = Object.fromEntries(players.map((p) => [p.id, p]));
 
-  /**
-   * Get match stats
-   */
+  // Get match stats
   const stats = await getMatchPlayerStatsRepo(lastBall.matchId);
   const statsMap = Object.fromEntries(stats.map((s) => [s.playerId, s]));
 
-  /**
-   * Current batsmen
-   */
+  // Current batsmen
   const strikerStats = statsMap[strikerId];
-  const nonStrikerStats = nonStrikerId ? statsMap[nonStrikerId] : null;
+  const nonStrikerStats = statsMap[nonStrikerId];
 
-  /**
-   * Bowler stats
-   */
+  // Bowler stats
   const bowlerStats = statsMap[bowlerId];
 
-  /**
-   * Last over summary
-   */
-  const currentOverNumber = lastBall.overNumber;
-
+  // Last over summary
   const lastOverBalls = recentBalls
     .filter((b) => b.overNumber === currentOverNumber)
     .reverse();
@@ -630,7 +792,7 @@ const buildLiveScoreDetails = async (inningsId: string) => {
     nonStriker: nonStrikerStats
       ? {
           id: nonStrikerId,
-          name: playerMap[nonStrikerId!]?.name,
+          name: playerMap[nonStrikerId]?.name,
           runs: nonStrikerStats.runs,
           balls: nonStrikerStats.ballsFaced,
         }

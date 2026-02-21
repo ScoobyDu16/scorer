@@ -2,6 +2,7 @@ import { getMatchByIdRepo } from "../match/match.repository";
 import {
   createAccessCodeRepo,
   findValidAccessCodeRepo,
+  getAccessCodeByMatchIdRepo,
   markAccessCodeUsedRepo,
 } from "./access-code.repository";
 
@@ -10,6 +11,16 @@ import {
  */
 const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const getAccessCodeByMatchIdService = async (matchId: string) => {
+  const accessCode = await getAccessCodeByMatchIdRepo(matchId);
+  
+  if (!accessCode) {
+    throw new Error("No valid access code found for this match");
+  }
+  
+  return accessCode;
 };
 
 export const generateAccessCodeService = async (matchId: string) => {

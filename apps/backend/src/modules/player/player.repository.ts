@@ -1,5 +1,5 @@
 import { db } from "../../db/client";
-import { players } from "../../db/schema";
+import { players, matchPlayers } from "../../db/schema";
 import { eq, and, ilike, sum, count, sql, inArray } from "drizzle-orm";
 import { playerMatchStats } from "../../db/schema";
 
@@ -145,6 +145,22 @@ export const getMatchPlayerStatsRepo = async (matchId: string) => {
     .select()
     .from(playerMatchStats)
     .where(eq(playerMatchStats.matchId, matchId));
+};
+
+export const getMatchPlayersRepo = async (matchId: string) => {
+  return db
+    .select({
+      id: players.id,
+      name: players.name,
+      email: players.email,
+      phone: players.phone,
+      team: matchPlayers.team,
+      isPlaying: matchPlayers.isPlaying
+    })
+    .from(matchPlayers)
+    .leftJoin(players, eq(matchPlayers.playerId, players.id))
+    .where(eq(matchPlayers.matchId, matchId))
+    .orderBy(matchPlayers.team, players.name);
 };
 
 export const getPlayerByIdRepo = async (playerId: string) => {

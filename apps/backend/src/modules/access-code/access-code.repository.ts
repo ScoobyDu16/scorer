@@ -41,6 +41,25 @@ export const markAccessCodeUsedRepo = async (id: string) => {
     .where(eq(accessCodes.id, id));
 };
 
+export const getAccessCodeByMatchIdRepo = async (matchId: string) => {
+  const now = new Date();
+
+  const [record] = await db
+    .select()
+    .from(accessCodes)
+    .where(
+      and(
+        eq(accessCodes.matchId, matchId),
+        eq(accessCodes.isUsed, false),
+        gt(accessCodes.expiresAt, now),
+      ),
+    )
+    .orderBy(accessCodes.createdAt)
+    .limit(1);
+
+  return record;
+};
+
 export const hasUsedAccessCodeForMatchRepo = async (
   matchId: string,
 ): Promise<boolean> => {

@@ -32,6 +32,8 @@ export const matches = pgTable("matches", {
 
   overs: integer("overs").notNull(),
 
+  playersPerTeam: integer("players_per_team").notNull(),
+
   venue: varchar("venue", { length: 200 }),
 
   tossWinner: teamEnum("toss_winner"),
