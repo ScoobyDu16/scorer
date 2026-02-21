@@ -1,5 +1,28 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { AuthPage } from './pages/AuthPage';
+import { Dashboard } from './pages/Dashboard';
+
 function App() {
-  return <div className="min-h-screen bg-green-500 text-red-500">Scorer</div>;
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Routes>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AuthProvider>
+  );
 }
 
 export default App;
