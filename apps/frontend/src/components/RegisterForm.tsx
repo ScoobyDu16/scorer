@@ -25,7 +25,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const registerMutation = useMutation({
     mutationFn: authAPI.register,
     onSuccess: (data) => {
-      console.log('Register mutation successful:', data);
       login(data);
       setSuccess('Registration successful! Redirecting...');
       setError('');
@@ -34,7 +33,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       }, 1000);
     },
     onError: (error: any) => {
-      console.error('Register mutation error:', error);
       setError(error.response?.data?.message || 'Registration failed');
       setSuccess('');
     },

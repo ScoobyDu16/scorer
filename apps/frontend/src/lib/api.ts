@@ -26,6 +26,7 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       window.location.href = '/auth';
     }
+    // Don't redirect on network errors, let components handle them
     return Promise.reject(error);
   }
 );

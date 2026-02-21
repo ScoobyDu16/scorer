@@ -19,7 +19,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const loginMutation = useMutation({
     mutationFn: authAPI.login,
     onSuccess: (data) => {
-      console.log('Login mutation successful:', data);
       login(data);
       setSuccess('Login successful! Redirecting...');
       setError('');
@@ -28,7 +27,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       }, 1000);
     },
     onError: (error: any) => {
-      console.error('Login mutation error:', error);
       setError(error.response?.data?.message || 'Login failed');
       setSuccess('');
     },

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PublicRoute } from './components/PublicRoute';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
 
@@ -8,7 +9,14 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/auth" element={<AuthPage />} />
+        <Route 
+          path="/auth" 
+          element={
+            <PublicRoute>
+              <AuthPage />
+            </PublicRoute>
+          } 
+        />
         <Route
           path="/*"
           element={

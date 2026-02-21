@@ -37,18 +37,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       const storedToken = getAuthToken();
       if (storedToken) {
+        setToken(storedToken); // Set token first
         try {
           const userData = await authAPI.getMe();
-          console.log('AuthContext initAuth - userData:', userData);
-          // The backend only returns {message: 'Authenticated', turfId: '...'}
-          // We need to fetch the full user data or handle this differently
-          // For now, let's just set the token and handle user data differently
-          setToken(storedToken);
-          // We'll need to create a separate endpoint or modify the existing one
-          // to get full user details. For now, this will work for auth purposes.
+          setUser(userData.turf);
         } catch (error) {
-          console.error('AuthContext initAuth error:', error);
-          removeAuthToken();
+          console.error('Failed to verify token:', error);
+          // Don't immediately remove token on network errors
+          // Only remove on 401 errors (handled by axios interceptor)
+          // This allows users to stay logged in during network issues
         }
       }
       setIsLoading(false);
@@ -58,11 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = (response: AuthResponse) => {
-    console.log('AuthContext login called with:', response);
     setUser(response.turf);
     setToken(response.token);
     localStorage.setItem('token', response.token);
-    console.log('Token stored in localStorage');
   };
 
   const logout = () => {

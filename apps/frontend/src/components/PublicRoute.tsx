@@ -2,11 +2,11 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-interface ProtectedRouteProps {
+interface PublicRouteProps {
   children: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { token, isLoading } = useAuth();
 
   if (isLoading) {
@@ -17,9 +17,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // Only check for token presence, user data can be loaded later
-  if (!token) {
-    return <Navigate to="/auth" replace />;
+  // If token exists, redirect to dashboard
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
