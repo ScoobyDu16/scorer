@@ -83,10 +83,28 @@ export const matchAPI = {
     teamBName: string;
     overs: number;
     venue?: string;
-    tossWinner?: string;
-    tossDecision?: string;
+    tossWinner?: 'A' | 'B';
+    tossDecision?: 'BAT' | 'FIELD';
+    playersPerTeam?: number;
   }): Promise<Match> => {
     const response = await api.post('/matches', data);
+    return response.data;
+  },
+
+  addMatchPlayers: async (matchId: string, players: {
+    playerId: string;
+    team: 'A' | 'B';
+  }[]): Promise<void> => {
+    const response = await api.post(`/matches/${matchId}/players`, { players });
+    return response.data;
+  },
+
+  startMatch: async (matchId: string, data: {
+    strikerId: string;
+    nonStrikerId: string;
+    bowlerId: string;
+  }): Promise<any> => {
+    const response = await api.post(`/matches/${matchId}/start`, data);
     return response.data;
   },
 
