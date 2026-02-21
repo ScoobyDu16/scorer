@@ -1,5 +1,7 @@
 import React from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { PlayersList } from '../components/PlayersList';
+import { MatchesList } from '../components/MatchesList';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -28,39 +30,13 @@ export const Dashboard: React.FC = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 flex items-center justify-center mt-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Welcome to Cricket Scorer Dashboard
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Manage your matches, players, and scoring from here.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Create Match
-                  </h3>
-                  <p className="text-gray-600">Start a new cricket match</p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Manage Players
-                  </h3>
-                  <p className="text-gray-600">
-                    Add and manage player profiles
-                  </p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    View Statistics
-                  </h3>
-                  <p className="text-gray-600">
-                    Check player and match statistics
-                  </p>
-                </div>
-              </div>
+        <div className="px-4 py-6 sm:px-0 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+              <PlayersList />
+            </div>
+            <div>
+              <MatchesList />
             </div>
           </div>
         </div>

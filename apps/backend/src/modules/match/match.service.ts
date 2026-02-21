@@ -21,6 +21,7 @@ import {
   getLastBallRepo,
   getMatchByIdRepo,
   getMatchWithInningsRepo,
+  getMatchesByTurfRepo,
   revertInningsTotalsRepo,
   updateInningsStatusRepo,
   updateInningsTotalsRepo,
@@ -40,6 +41,10 @@ export const createMatchService = async (turfId: string, data: any) => {
   });
 
   return match;
+};
+
+export const getMatchesService = async (turfId: string) => {
+  return getMatchesByTurfRepo(turfId);
 };
 
 export const addMatchPlayersService = async (

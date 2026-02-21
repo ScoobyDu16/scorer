@@ -54,3 +54,27 @@ export interface AuthResponse {
   };
   token: string;
 }
+
+export interface Player {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  turfId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Match {
+  id: string;
+  turfId: string;
+  teamAName: string;
+  teamBName: string;
+  overs: number;
+  venue?: string;
+  tossWinner?: string;
+  tossDecision?: string;
+  status: "UPCOMING" | "IN_PROGRESS" | "COMPLETED";
+  createdAt: string;
+  updatedAt: string;
+}

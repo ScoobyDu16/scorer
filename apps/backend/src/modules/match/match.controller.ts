@@ -7,6 +7,7 @@ import {
   createMatchService,
   endInningsService,
   getMatchScoreService,
+  getMatchesService,
   startInningsService,
   undoLastBallService,
 } from "./match.service";
@@ -24,6 +25,23 @@ export const getMatchScore = async (req: AuthRequest, res: Response) => {
     res.json(score);
   } catch (error: any) {
     businessLogger.error('fetching match score', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMatches = async (req: AuthRequest, res: Response) => {
+  try {
+    const turfId = req.turfId!;
+    
+    businessLogger.fetching('matches', `turf-id ${turfId}`);
+    
+    const matches = await getMatchesService(turfId);
+    
+    businessLogger.found('matches', matches, { turfId });
+    
+    res.json(matches);
+  } catch (error: any) {
+    businessLogger.error('fetching matches', error, { turfId: req.turfId });
     res.status(500).json({ message: error.message });
   }
 };

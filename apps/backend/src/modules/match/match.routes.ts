@@ -6,11 +6,15 @@ import {
   createMatch,
   endInnings,
   getMatchScore,
+  getMatches,
   startMatch,
   undoLastBall,
 } from "./match.controller";
 
 const router = Router();
+
+// Get all matches for turf
+router.get("/", authMiddleware, getMatches);
 
 // Owner creates match
 router.post("/", authMiddleware, createMatch);

@@ -136,6 +136,14 @@ export const getMatchWithInningsRepo = async (matchId: string) => {
   });
 };
 
+export const getMatchesByTurfRepo = async (turfId: string) => {
+  return db
+    .select()
+    .from(matches)
+    .where(eq(matches.turfId, turfId))
+    .orderBy(desc(matches.createdAt));
+};
+
 export const completeMatchRepo = async (matchId: string) => {
   await db
     .update(matches)
