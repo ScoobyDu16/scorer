@@ -4,6 +4,8 @@ import {
   generateAccessCodeService,
   validateAccessCodeService,
 } from "./access-code.service";
+import { getMatchByIdRepo } from "../match/match.repository";
+import { markAccessCodeUsedRepo } from "./access-code.repository";
 
 /**
  * Owner generates code
@@ -35,10 +37,29 @@ export const validateAccessCode = async (req: any, res: Response) => {
 
     const record = await validateAccessCodeService(matchId, code);
 
+    if (!record) {
+      throw new Error("Invalid or expired code");
+    }
+
+    // Get match details to include playersPerTeam
+    const match = await getMatchByIdRepo(matchId);
+
+    await markAccessCodeUsedRepo(record.id);
+
     res.json({
       message: "Code valid",
       matchId: record.matchId,
       turfId: record.turfId,
+      match: {
+        id: match.id,
+        teamAName: match.teamAName,
+        teamBName: match.teamBName,
+        playersPerTeam: match.playersPerTeam,
+        overs: match.overs,
+        venue: match.venue,
+        tossWinner: match.tossWinner,
+        tossDecision: match.tossDecision
+      }
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message });

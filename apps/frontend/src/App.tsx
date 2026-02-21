@@ -8,6 +8,7 @@ import { PlayersPage } from './pages/PlayersPage';
 import { CreateMatchPage } from './pages/CreateMatchPage';
 import { GenerateAccessCodePage } from './pages/GenerateAccessCodePage';
 import { AccessCodePage } from './pages/AccessCodePage';
+import { MatchSetupPage } from './pages/MatchSetupPage';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/create-match" element={<CreateMatchPage />} />
                 <Route path="/generate-code" element={<GenerateAccessCodePage />} />
                 <Route path="/access-code" element={<AccessCodePage />} />
+                <Route path="/match-setup/:matchId" element={<MatchSetupPage />} />
               </Routes>
             </ProtectedRoute>
           }

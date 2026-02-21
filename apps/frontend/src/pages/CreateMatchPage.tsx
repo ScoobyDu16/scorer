@@ -47,6 +47,12 @@ export const CreateMatchPage: React.FC = () => {
 
   const closeModal = () => {
     setShowSuccessModal(false);
+    // Store match data with playersPerTeam for setup page
+    const matchDataForSetup = {
+      matchId: createdMatchId,
+      playersPerTeam: formData.playersPerTeam || 11
+    };
+    localStorage.setItem('currentMatch', JSON.stringify(matchDataForSetup));
     navigate('/access-code');
   };
 
