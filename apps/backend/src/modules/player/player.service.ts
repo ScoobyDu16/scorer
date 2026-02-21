@@ -4,6 +4,9 @@ import {
   findPlayerByUniqueFields,
   getPlayerCareerStatsRepo,
   getPlayersRepo,
+  updatePlayerRepo,
+  deletePlayerRepo,
+  getPlayerByIdRepo,
 } from "./player.repository";
 
 export const createPlayerService = async (turfId: string, data: any) => {
@@ -25,8 +28,27 @@ export const createPlayerService = async (turfId: string, data: any) => {
   return player;
 };
 
-export const getPlayersService = async (turfId: string, search?: string) => {
-  return getPlayersRepo(turfId, search);
+export const getPlayersService = async (
+  turfId: string,
+  search?: string,
+  page = 1,
+  limit = 20,
+  sortBy = 'name',
+  sortOrder: 'asc' | 'desc' = 'asc'
+) => {
+  const result = await getPlayersRepo(
+    turfId,
+    search,
+    page,
+    limit,
+    sortBy,
+    sortOrder
+  );
+
+  return {
+    players: Array.isArray(result.players) ? result.players : [],
+    pagination: result.pagination,
+  };
 };
 
 export const getPlayerCareerStatsService = async (playerId: string) => {
@@ -79,4 +101,16 @@ export const getPlayerCareerStatsService = async (playerId: string) => {
     strikeRate: Number(strikeRate.toFixed(2)),
     economy: Number(economy.toFixed(2)),
   };
+};
+
+export const updatePlayerService = async (playerId: string, data: any) => {
+  const player = await updatePlayerRepo(playerId, data);
+  if (!player) {
+    throw new Error("Player not found");
+  }
+  return player;
+};
+
+export const deletePlayerService = async (playerId: string) => {
+  await deletePlayerRepo(playerId);
 };

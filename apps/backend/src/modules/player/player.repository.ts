@@ -1,6 +1,17 @@
 import { db } from "../../db/client";
 import { players } from "../../db/schema";
-import { eq, and, ilike, sum, count, sql, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  ilike,
+  sum,
+  count,
+  sql,
+  inArray,
+  desc,
+  asc,
+  or,
+} from "drizzle-orm";
 import { playerMatchStats } from "../../db/schema";
 
 export const createPlayerRepo = async (data: any) => {
@@ -27,19 +38,73 @@ export const findPlayerByUniqueFields = async (
   return player;
 };
 
-export const getPlayersRepo = async (turfId: string, search?: string) => {
-  let query = db.select().from(players).where(eq(players.turfId, turfId));
+export const getPlayersRepo = async (
+  turfId: string,
+  search?: string,
+  page = 1,
+  limit = 20,
+  sortBy = "name",
+  sortOrder: "asc" | "desc" = "asc",
+) => {
+  const offset = (page - 1) * limit;
+
+  /**
+   * 1️⃣ Build conditions array
+   */
+  const conditions = [eq(players.turfId, turfId)];
 
   if (search) {
-    query = db
-      .select()
-      .from(players)
-      .where(
-        and(eq(players.turfId, turfId), ilike(players.name, `%${search}%`)),
-      );
+    conditions.push(
+      or(
+        ilike(players.name, `%${search}%`),
+        ilike(players.phone, `%${search}%`),
+        ilike(players.email, `%${search}%`),
+      )!,
+    );
   }
 
-  return query;
+  const whereCondition = and(...conditions);
+
+  /**
+   * 2️⃣ Sorting
+   */
+  const sortColumn = sortBy === "name" ? players.name : players.createdAt;
+
+  const sortDirection =
+    sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn);
+
+  /**
+   * 3️⃣ Count query
+   */
+  const [totalCountResult] = await db
+    .select({ count: count() })
+    .from(players)
+    .where(whereCondition);
+
+  const total = totalCountResult?.count || 0;
+
+  /**
+   * 4️⃣ Data query
+   */
+  const playersList = await db
+    .select()
+    .from(players)
+    .where(whereCondition)
+    .orderBy(sortDirection)
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    players: playersList,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasNext: page * limit < total,
+      hasPrev: page > 1,
+    },
+  };
 };
 
 export const getPlayerCareerStatsRepo = async (playerId: string) => {
@@ -160,4 +225,17 @@ export const getPlayersByIdsRepo = async (ids: string[]) => {
   if (!ids.length) return [];
 
   return db.select().from(players).where(inArray(players.id, ids));
+};
+
+export const updatePlayerRepo = async (playerId: string, data: any) => {
+  const [player] = await db
+    .update(players)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(players.id, playerId))
+    .returning();
+  return player;
+};
+
+export const deletePlayerRepo = async (playerId: string) => {
+  await db.delete(players).where(eq(players.id, playerId));
 };

@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicRoute } from './components/PublicRoute';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
+import { PlayersPage } from './pages/PlayersPage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/players" element={<PlayersPage />} />
               </Routes>
             </ProtectedRoute>
           }

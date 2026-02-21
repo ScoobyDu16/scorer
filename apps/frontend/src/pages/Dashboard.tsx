@@ -46,16 +46,24 @@ export const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Create Match
+                  Manage Players
                 </h3>
-                <p className="text-gray-600">Start a new cricket match</p>
+                <p className="text-gray-600 mb-4">
+                  Add, edit, and manage player profiles
+                </p>
+                <a
+                  href="/players"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
+                >
+                  Go to Players
+                </a>
               </div>
               <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Manage Players
+                  Create Match
                 </h3>
                 <p className="text-gray-600">
-                  Add and manage player profiles
+                  Start a new cricket match
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow">

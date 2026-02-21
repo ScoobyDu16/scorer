@@ -18,15 +18,40 @@ export const authAPI = {
 };
 
 export const playerAPI = {
-  getPlayers: async (search?: string): Promise<Player[]> => {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    const response = await api.get(`/players${params}`);
+  getPlayers: async (search?: string, page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<{
+    players: Player[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> => {
+    const params = new URLSearchParams({
+      search: search || '',
+      page: page.toString(),
+      limit: limit.toString(),
+      sortBy,
+      sortOrder,
+    });
+    const response = await api.get(`/players?${params}`);
     return response.data;
   },
 
   createPlayer: async (data: { name: string; email?: string; phone?: string }): Promise<Player> => {
     const response = await api.post('/players', data);
     return response.data;
+  },
+
+  updatePlayer: async (playerId: string, data: { name: string; email?: string; phone?: string }): Promise<Player> => {
+    const response = await api.put(`/players/${playerId}`, data);
+    return response.data;
+  },
+
+  deletePlayer: async (playerId: string): Promise<void> => {
+    await api.delete(`/players/${playerId}`);
   },
 
   getPlayerStats: async (playerId: string) => {
