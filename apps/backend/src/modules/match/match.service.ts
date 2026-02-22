@@ -18,8 +18,10 @@ import {
   createMatchRepo,
   deleteBallRepo,
   getCurrentInningsRepo,
+  getInningsByIdRepo,
   getLastBallRepo,
   getMatchByIdRepo,
+  getMatchPlayersRepo,
   getMatchWithInningsRepo,
   getMatchesByTurfRepo,
   revertInningsTotalsRepo,
@@ -63,7 +65,14 @@ export const addMatchPlayersService = async (
   return addMatchPlayersRepo(records);
 };
 
-export const startInningsService = async (matchId: string) => {
+export const getMatchPlayersService = async (matchId: string) => {
+  return getMatchPlayersRepo(matchId);
+};
+
+export const startInningsService = async (
+  matchId: string,
+  openingPlayers?: { strikerId: string; nonStrikerId: string; bowlerId: string }
+) => {
   /**
    * 1️⃣ Get match
    */
@@ -106,6 +115,8 @@ export const startInningsService = async (matchId: string) => {
     matchId,
     inningsNumber: 1,
     battingTeam,
+    openingStrikerId: openingPlayers?.strikerId,
+    openingNonStrikerId: openingPlayers?.nonStrikerId,
     status: "LIVE",
   });
 
@@ -118,7 +129,11 @@ export const startInningsService = async (matchId: string) => {
     startTime: new Date(),
   });
 
-  return inningsRecord;
+  // Return innings with opening bowler for frontend temporary state
+  return {
+    ...inningsRecord,
+    openingBowlerId: openingPlayers?.bowlerId, // Temporary UI state, not stored
+  };
 };
 
 export const addBallService = async (matchId: string, data: any) => {
@@ -565,7 +580,36 @@ const buildLiveScoreDetails = async (inningsId: string) => {
   // Get last 12 balls (enough to detect over + batsmen)
   const recentBalls = await getLastBallsRepo(inningsId, 12);
 
-  if (!recentBalls.length) return null;
+  // If no balls delivered yet, use opening players
+  if (!recentBalls.length) {
+    // Get innings details to get opening players
+    const innings = await getInningsByIdRepo(inningsId);
+    
+    if (!innings?.openingStrikerId || !innings?.openingNonStrikerId) {
+      return null;
+    }
+
+    const playerIds = [innings.openingStrikerId, innings.openingNonStrikerId];
+    const players = await getPlayersByIdsRepo(playerIds);
+    const playerMap = Object.fromEntries(players.map((p) => [p.id, p]));
+
+    return {
+      striker: {
+        id: innings.openingStrikerId,
+        name: playerMap[innings.openingStrikerId]?.name,
+        runs: 0,
+        balls: 0,
+      },
+      nonStriker: {
+        id: innings.openingNonStrikerId,
+        name: playerMap[innings.openingNonStrikerId]?.name,
+        runs: 0,
+        balls: 0,
+      },
+      bowler: null, // Opening bowler handled by frontend temporary state
+      lastOver: [],
+    };
+  }
 
   const lastBall = recentBalls[0];
 

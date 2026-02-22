@@ -2,7 +2,7 @@ import { balls } from "../../db/schema";
 import { sql, desc, eq, and } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { innings, matches, matchPlayers } from "../../db/schema";
+import { innings, matches, matchPlayers, players } from "../../db/schema";
 
 export const createMatchRepo = async (data: any) => {
   const [match] = await db.insert(matches).values(data).returning();
@@ -11,6 +11,23 @@ export const createMatchRepo = async (data: any) => {
 
 export const addMatchPlayersRepo = async (data: any[]) => {
   return db.insert(matchPlayers).values(data).returning();
+};
+
+export const getMatchPlayersRepo = async (matchId: string) => {
+  return db
+    .select({
+      playerId: matchPlayers.playerId,
+      team: matchPlayers.team,
+      player: {
+        id: players.id,
+        name: players.name,
+        email: players.email,
+        phone: players.phone,
+      },
+    })
+    .from(matchPlayers)
+    .leftJoin(players, eq(matchPlayers.playerId, players.id))
+    .where(eq(matchPlayers.matchId, matchId));
 };
 
 export const getMatchByIdRepo = async (matchId: string) => {
@@ -110,6 +127,15 @@ export const getCurrentInningsRepo = async (
         eq(innings.inningsNumber, inningsNumber),
       ),
     );
+
+  return record;
+};
+
+export const getInningsByIdRepo = async (inningsId: string) => {
+  const [record] = await db
+    .select()
+    .from(innings)
+    .where(eq(innings.id, inningsId));
 
   return record;
 };

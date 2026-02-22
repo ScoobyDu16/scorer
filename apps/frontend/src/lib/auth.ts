@@ -40,6 +40,11 @@ export const playerAPI = {
     return response.data;
   },
 
+  getPlayer: async (playerId: string): Promise<Player> => {
+    const response = await api.get(`/players/${playerId}`);
+    return response.data;
+  },
+
   createPlayer: async (data: { name: string; email?: string; phone?: string }): Promise<Player> => {
     const response = await api.post('/players', data);
     return response.data;
@@ -78,6 +83,36 @@ export const matchAPI = {
     return response.data;
   },
 
+  getMatch: async (matchId: string): Promise<Match> => {
+    const response = await api.get(`/matches/${matchId}`);
+    return response.data;
+  },
+
+  getCurrentInnings: async (matchId: string): Promise<any> => {
+    const response = await api.get(`/matches/${matchId}/current-innings`);
+    return response.data;
+  },
+
+  getBalls: async (inningsId: string): Promise<any[]> => {
+    const response = await api.get(`/innings/${inningsId}/balls`);
+    return response.data;
+  },
+
+  addBall: async (data: {
+    inningsId: string;
+    strikerId: string;
+    bowlerId: string;
+    runs: number;
+    isWide: boolean;
+    isNoBall: boolean;
+    isByes: boolean;
+    isLegByes: boolean;
+    isWicket: boolean;
+  }): Promise<any> => {
+    const response = await api.post(`/balls`, data);
+    return response.data;
+  },
+
   createMatch: async (data: {
     teamAName: string;
     teamBName: string;
@@ -110,6 +145,11 @@ export const matchAPI = {
 
   getMatchScore: async (matchId: string) => {
     const response = await api.get(`/matches/${matchId}/score`);
+    return response.data;
+  },
+
+  getMatchPlayers: async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/players`);
     return response.data;
   },
 };

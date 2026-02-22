@@ -140,7 +140,10 @@ export const MatchSetupPage: React.FC = () => {
     mutationFn: (data: { matchId: string; strikerId: string; nonStrikerId: string; bowlerId: string }) =>
       matchAPI.startMatch(data.matchId, data),
     onSuccess: () => {
-      navigate(`/scoring/${matchId}`);
+      // Pass opening bowler state to ScoringPage via navigation state
+      navigate(`/scoring/${matchId}`, { 
+        state: { openingBowlerId: selectedBowler } 
+      });
     },
     onError: (error: any) => {
       alert(`Error starting match: ${error.message}`);

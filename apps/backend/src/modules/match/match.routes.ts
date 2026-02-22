@@ -5,6 +5,7 @@ import {
   addMatchPlayers,
   createMatch,
   endInnings,
+  getMatchPlayers,
   getMatchScore,
   getMatches,
   startMatch,
@@ -21,6 +22,9 @@ router.post("/", authMiddleware, createMatch);
 
 // Add players to match
 router.post("/:matchId/players", authMiddleware, addMatchPlayers);
+
+// Get match players
+router.get("/:matchId/players", authMiddleware, getMatchPlayers);
 
 router.post("/:matchId/start", authMiddleware, startMatch);
 

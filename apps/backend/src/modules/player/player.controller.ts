@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../../middleware/auth.middleware";
 import {
   createPlayerService,
+  getPlayerByIdService,
   getPlayerCareerStatsService,
   getPlayersService,
   updatePlayerService,
@@ -40,6 +41,22 @@ export const getPlayers = async (req: AuthRequest, res: Response) => {
     );
 
     res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getPlayer = async (req: AuthRequest, res: Response) => {
+  try {
+    const playerId = req.params.playerId as string;
+
+    const player = await getPlayerByIdService(playerId);
+
+    if (!player) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+
+    res.json(player);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

@@ -1,0 +1,485 @@
+import React, { useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { matchAPI } from "../lib/auth";
+
+export const ScoringPage: React.FC = () => {
+  const { matchId } = useParams<{ matchId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+
+  // Get opening bowler from navigation state (temporary UI state)
+  const locationState = location.state as { openingBowlerId?: string } | null;
+  const openingBowlerId = locationState?.openingBowlerId;
+
+  const [selectedRuns, setSelectedRuns] = useState<number>(0);
+  const [isWide, setIsWide] = useState(false);
+  const [isNoBall, setIsNoBall] = useState(false);
+  const [isByes, setIsByes] = useState(false);
+  const [isLegByes, setIsLegByes] = useState(false);
+  const [isWicket, setIsWicket] = useState(false);
+
+  // Fetch match score data (includes current innings and live data)
+  const { data: matchScore, isLoading: scoreLoading } = useQuery({
+    queryKey: ["matchScore", matchId],
+    queryFn: () => matchAPI.getMatchScore(matchId!),
+    enabled: !!matchId,
+  });
+
+  // Fetch match players to resolve opening bowler name locally
+  const { data: matchPlayers } = useQuery({
+    queryKey: ["matchPlayers", matchId],
+    queryFn: () => matchAPI.getMatchPlayers(matchId!),
+    enabled: !!matchId,
+  });
+
+  // Extract data from match score response
+  const currentInnings = matchScore?.innings?.find(
+    (i: any) => i.inningsNumber === matchScore?.currentInnings,
+  );
+  const liveData = matchScore?.live;
+
+  // Calculate current striker, non-striker, bowler from live data
+  const getCurrentPlayers = () => {
+    if (!liveData || !liveData.balls || liveData.balls.length === 0) {
+      // Use opening players if no balls delivered yet
+      // Resolve opening bowler from match players using openingBowlerId
+      const openingBowler =
+        openingBowlerId && matchPlayers
+          ? matchPlayers.find((p: any) => p.playerId === openingBowlerId)
+          : null;
+
+      return {
+        striker: liveData?.striker,
+        nonStriker: liveData?.nonStriker,
+        bowler: openingBowler
+          ? {
+              id: openingBowler.playerId,
+              name: openingBowler.player?.name || "Opening Bowler", // Resolve from player data
+              overs: 0,
+              runs: 0,
+              wickets: 0,
+            }
+          : null,
+      };
+    }
+
+    // Derive from latest ball
+    const latestBall = liveData.balls[liveData.balls.length - 1];
+    return {
+      striker: latestBall.strikerId,
+      nonStriker: null, // Need to track strike rotation
+      bowler: latestBall.bowlerId,
+    };
+  };
+
+  const currentPlayers = getCurrentPlayers();
+  const balls = liveData?.balls || [];
+
+  // Add ball mutation
+  const addBallMutation = useMutation({
+    mutationFn: (data: {
+      inningsId: string;
+      strikerId: string;
+      bowlerId: string;
+      runs: number;
+      isWide: boolean;
+      isNoBall: boolean;
+      isByes: boolean;
+      isLegByes: boolean;
+      isWicket: boolean;
+    }) => matchAPI.addBall(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
+      // Reset form
+      setSelectedRuns(0);
+      setIsWide(false);
+      setIsNoBall(false);
+      setIsByes(false);
+      setIsLegByes(false);
+      setIsWicket(false);
+    },
+    onError: (error: any) => {
+      alert(`Error adding ball: ${error.message}`);
+    },
+  });
+
+  const handleScoreBall = () => {
+    if (!currentInnings || !currentPlayers.striker) return;
+
+    addBallMutation.mutate({
+      inningsId: currentInnings.id,
+      strikerId: currentPlayers.striker.id,
+      bowlerId: currentPlayers.bowler?.id || "", // Need to handle first ball case
+      runs: selectedRuns,
+      isWide,
+      isNoBall,
+      isByes,
+      isLegByes,
+      isWicket,
+    });
+  };
+
+  const formatOvers = (balls: number) => {
+    const overs = Math.floor(balls / 6);
+    const remainingBalls = balls % 6;
+    return `${overs}.${remainingBalls}`;
+  };
+
+  const calculateRunRate = (runs: number, balls: number) => {
+    if (balls === 0) return 0;
+    const overs = balls / 6;
+    return (runs / overs).toFixed(2);
+  };
+
+  const calculateRequiredRunRate = (
+    target: number,
+    currentRuns: number,
+    balls: number,
+  ) => {
+    if (balls === 0) return 0;
+    const remainingRuns = target - currentRuns;
+    const remainingOvers = balls / 6;
+    return (remainingRuns / remainingOvers).toFixed(2);
+  };
+
+  if (scoreLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!matchScore) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="text-red-600">Match score not found.</div>
+      </div>
+    );
+  }
+
+  const battingTeam =
+    currentInnings?.battingTeam === "A"
+      ? matchScore.teamAName
+      : matchScore.teamBName;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          {/* Match Header */}
+          <div className="bg-white shadow rounded-lg mb-6">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {matchScore.teamAName} vs {matchScore.teamBName}
+                </h1>
+                <div className="mt-4 text-lg">
+                  <span className="font-medium">{battingTeam}</span>
+                  <span className="mx-2">
+                    {currentInnings?.totalRuns || 0}/
+                    {currentInnings?.totalWickets || 0}
+                  </span>
+                  <span className="text-gray-600">
+                    ({formatOvers(currentInnings?.totalOvers || 0)})
+                  </span>
+                </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  CRR:{" "}
+                  {calculateRunRate(
+                    currentInnings?.totalRuns || 0,
+                    currentInnings?.totalOvers || 0,
+                  )}
+                  {matchScore.currentInnings === 2 && matchScore.target && (
+                    <span className="ml-4">
+                      RR:{" "}
+                      {calculateRequiredRunRate(
+                        matchScore.target,
+                        currentInnings?.totalRuns || 0,
+                        currentInnings?.totalOvers || 0,
+                      )}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Batsmen Stats */}
+            <div className="lg:col-span-2">
+              <div className="bg-white shadow rounded-lg mb-6">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Batsmen
+                  </h2>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Batsman
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Runs
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Balls
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            4s
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            6s
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            SR
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {/* Will be populated with actual batsman data */}
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {currentPlayers.striker?.name}*
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0.00
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {currentPlayers.nonStriker?.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0.00
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bowler Stats */}
+              <div className="bg-white shadow rounded-lg mb-6">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Bowler
+                  </h2>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Bowler
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Overs
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Maidens
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Runs
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Wickets
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Economy
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {/* Will be populated with actual bowler data */}
+                        <tr>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {currentPlayers.bowler?.name || "Not set"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0.0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            0.00
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Balls */}
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Recent Balls
+                  </h2>
+                  <div className="flex space-x-2 overflow-x-auto">
+                    {balls?.slice(-6).map((ball: any) => (
+                      <div
+                        key={ball.id}
+                        className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-sm font-medium"
+                      >
+                        {ball.runs}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Scoring Controls */}
+            <div className="lg:col-span-1">
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Score Ball
+                  </h2>
+
+                  {/* Run Buttons */}
+                  <div className="mb-6">
+                    <div className="grid grid-cols-3 gap-2">
+                      {[0, 1, 2, 3, 4, 5, 6].map((runs) => (
+                        <button
+                          key={runs}
+                          onClick={() => setSelectedRuns(runs)}
+                          className={`px-4 py-3 text-sm font-medium rounded-md ${
+                            selectedRuns === runs
+                              ? "bg-green-600 text-white"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {runs}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Extras Checkboxes */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                      Extras
+                    </h3>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isWide}
+                          onChange={(e) => setIsWide(e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Wide</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isNoBall}
+                          onChange={(e) => setIsNoBall(e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">No Ball</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isByes}
+                          onChange={(e) => setIsByes(e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Byes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isLegByes}
+                          onChange={(e) => setIsLegByes(e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Leg Byes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isWicket}
+                          onChange={(e) => setIsWicket(e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700">Wicket</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleScoreBall}
+                      disabled={addBallMutation.isPending}
+                      className="w-full px-4 py-3 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {addBallMutation.isPending ? "Scoring..." : "Score Ball"}
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200">
+                        Undo Ball
+                      </button>
+                      <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200">
+                        Change Strike
+                      </button>
+                      <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200">
+                        Retire Batsman
+                      </button>
+                      <button
+                        onClick={() => navigate("/dashboard")}
+                        className="px-4 py-2 bg-red-100 text-red-700 font-medium rounded-md hover:bg-red-200"
+                      >
+                        End Match
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

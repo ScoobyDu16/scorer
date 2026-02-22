@@ -7,6 +7,7 @@ import {
   createMatchService,
   endInningsService,
   getMatchScoreService,
+  getMatchPlayersService,
   getMatchesService,
   startInningsService,
   undoLastBallService,
@@ -88,13 +89,31 @@ export const addMatchPlayers = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getMatchPlayers = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    
+    businessLogger.fetching('match players', `match-id ${matchId}`);
+    
+    const players = await getMatchPlayersService(matchId);
+    
+    businessLogger.found('match players', players, { matchId });
+    
+    res.json(players);
+  } catch (error: any) {
+    businessLogger.error('fetching match players', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const startMatch = async (req: AuthRequest, res: Response) => {
   try {
     const matchId = req.params.matchId as string;
+    const { strikerId, nonStrikerId, bowlerId } = req.body;
 
-    businessLogger.start('starting match', { matchId });
+    businessLogger.start('starting match', { matchId, strikerId, nonStrikerId, bowlerId });
 
-    const innings = await startInningsService(matchId);
+    const innings = await startInningsService(matchId, { strikerId, nonStrikerId, bowlerId });
     
     businessLogger.success('match started', { matchId, inningsId: innings.id });
     

@@ -10,6 +10,7 @@ import {
 import { relations } from "drizzle-orm";
 import { matches } from "./matches";
 import { teamEnum } from "./enums";
+import { players } from "./players";
 
 /**
  * Innings status enum
@@ -31,6 +32,13 @@ export const innings = pgTable(
     inningsNumber: integer("innings_number").notNull(), // 1 or 2
 
     battingTeam: teamEnum("batting_team").notNull(),
+
+    // Opening players - stored once at innings start, used only until first ball is delivered
+    openingStrikerId: uuid("opening_striker_id")
+      .references(() => players.id, { onDelete: "set null" }),
+    
+    openingNonStrikerId: uuid("opening_non_striker_id")
+      .references(() => players.id, { onDelete: "set null" }),
 
     totalRuns: integer("total_runs").default(0).notNull(),
     totalWickets: integer("total_wickets").default(0).notNull(),
@@ -56,5 +64,13 @@ export const inningsRelations = relations(innings, ({ one }) => ({
   match: one(matches, {
     fields: [innings.matchId],
     references: [matches.id],
+  }),
+  openingStriker: one(players, {
+    fields: [innings.openingStrikerId],
+    references: [players.id],
+  }),
+  openingNonStriker: one(players, {
+    fields: [innings.openingNonStrikerId],
+    references: [players.id],
   }),
 }));
