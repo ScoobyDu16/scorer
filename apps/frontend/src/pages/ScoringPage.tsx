@@ -1,17 +1,12 @@
 import React, { useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { matchAPI } from "../lib/auth";
 
 export const ScoringPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
-
-  // Get opening bowler from navigation state (temporary UI state)
-  const locationState = location.state as { openingBowlerId?: string } | null;
-  const openingBowlerId = locationState?.openingBowlerId;
 
   const [isWide, setIsWide] = useState(false);
   const [isNoBall, setIsNoBall] = useState(false);
@@ -26,13 +21,6 @@ export const ScoringPage: React.FC = () => {
     enabled: !!matchId,
   });
 
-  // Fetch match players to resolve opening bowler name locally
-  const { data: matchPlayers } = useQuery({
-    queryKey: ["matchPlayers", matchId],
-    queryFn: () => matchAPI.getMatchPlayers(matchId!),
-    enabled: !!matchId,
-  });
-
   // Extract data from match score response
   const currentInnings = matchScore?.innings?.find(
     (i: any) => i.inningsNumber === matchScore?.currentInnings,
@@ -42,25 +30,10 @@ export const ScoringPage: React.FC = () => {
   // Calculate current striker, non-striker, bowler from live data
   const getCurrentPlayers = () => {
     if (!liveData || !liveData.balls || liveData.balls.length === 0) {
-      // Use opening players if no balls delivered yet
-      // Resolve opening bowler from match players using openingBowlerId
-      const openingBowler =
-        openingBowlerId && matchPlayers
-          ? matchPlayers.find((p: any) => p.playerId === openingBowlerId)
-          : null;
-
       return {
         striker: liveData?.striker,
         nonStriker: liveData?.nonStriker,
-        bowler: openingBowler
-          ? {
-              id: openingBowler.playerId,
-              name: openingBowler.player?.name || "Opening Bowler", // Resolve from player data
-              overs: 0,
-              runs: 0,
-              wickets: 0,
-            }
-          : null,
+        bowler: liveData?.bowler,
       };
     }
 
@@ -132,7 +105,7 @@ export const ScoringPage: React.FC = () => {
   const calculateRunRate = (runs: number, overs: number) => {
     if (overs === 0) return "0.00";
     // Convert cricket notation (0.3 = 3 balls) to decimal overs (0.5 = 3 balls)
-    const decimalOvers = Math.floor(overs) + (overs % 1) * 10 / 6;
+    const decimalOvers = Math.floor(overs) + ((overs % 1) * 10) / 6;
     return (runs / decimalOvers).toFixed(2);
   };
 
@@ -357,8 +330,12 @@ export const ScoringPage: React.FC = () => {
                               {liveData.bowler.overs > 0
                                 ? (() => {
                                     // Convert cricket notation (0.3 = 3 balls) to decimal overs (0.5 = 3 balls)
-                                    const decimalOvers = Math.floor(liveData.bowler.overs) + (liveData.bowler.overs % 1) * 10 / 6;
-                                    return (liveData.bowler.runs / decimalOvers).toFixed(2);
+                                    const decimalOvers =
+                                      Math.floor(liveData.bowler.overs) +
+                                      ((liveData.bowler.overs % 1) * 10) / 6;
+                                    return (
+                                      liveData.bowler.runs / decimalOvers
+                                    ).toFixed(2);
                                   })()
                                 : "0.00"}
                             </td>

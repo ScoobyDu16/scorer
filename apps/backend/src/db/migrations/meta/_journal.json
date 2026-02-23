@@ -120,6 +120,20 @@
       "when": 1771766324080,
       "tag": "0016_real_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1771837516997,
+      "tag": "0017_dark_sandman",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1771844094211,
+      "tag": "0018_bitter_black_crow",
+      "breakpoints": true
     }
   ]
 }

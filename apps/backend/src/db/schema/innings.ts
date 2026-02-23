@@ -40,6 +40,17 @@ export const innings = pgTable(
     openingNonStrikerId: uuid("opening_non_striker_id")
       .references(() => players.id, { onDelete: "set null" }),
 
+    // Current striker tracking - updated after each ball
+    currentStrikerId: uuid("current_striker_id")
+      .references(() => players.id, { onDelete: "set null" }),
+    
+    currentNonStrikerId: uuid("current_non_striker_id")
+      .references(() => players.id, { onDelete: "set null" }),
+
+    // Current bowler tracking - updated after each over
+    currentBowlerId: uuid("current_bowler_id")
+      .references(() => players.id, { onDelete: "set null" }),
+
     totalRuns: integer("total_runs").default(0).notNull(),
     totalWickets: integer("total_wickets").default(0).notNull(),
 
@@ -71,6 +82,18 @@ export const inningsRelations = relations(innings, ({ one }) => ({
   }),
   openingNonStriker: one(players, {
     fields: [innings.openingNonStrikerId],
+    references: [players.id],
+  }),
+  currentStriker: one(players, {
+    fields: [innings.currentStrikerId],
+    references: [players.id],
+  }),
+  currentNonStriker: one(players, {
+    fields: [innings.currentNonStrikerId],
+    references: [players.id],
+  }),
+  currentBowler: one(players, {
+    fields: [innings.currentBowlerId],
     references: [players.id],
   }),
 }));

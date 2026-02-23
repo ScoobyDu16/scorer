@@ -179,3 +179,20 @@ export const completeMatchRepo = async (matchId: string) => {
     })
     .where(eq(matches.id, matchId));
 };
+
+export const updateInningsCurrentPlayersRepo = async (
+  inningsId: string,
+  strikerId: string,
+  nonStrikerId: string,
+  bowlerId?: string,
+) => {
+  await db
+    .update(innings)
+    .set({
+      currentStrikerId: strikerId,
+      currentNonStrikerId: nonStrikerId,
+      currentBowlerId: bowlerId || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(innings.id, inningsId));
+};

@@ -1,0 +1,2 @@
+ALTER TABLE "innings" ADD COLUMN "current_bowler_id" uuid;--> statement-breakpoint
+ALTER TABLE "innings" ADD CONSTRAINT "innings_current_bowler_id_players_id_fk" FOREIGN KEY ("current_bowler_id") REFERENCES "public"."players"("id") ON DELETE set null ON UPDATE no action;

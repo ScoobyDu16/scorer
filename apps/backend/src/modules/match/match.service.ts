@@ -25,11 +25,13 @@ import {
   getMatchWithInningsRepo,
   getMatchesByTurfRepo,
   revertInningsTotalsRepo,
+  updateInningsCurrentPlayersRepo,
   updateInningsStatusRepo,
   updateInningsTotalsRepo,
   updateMatchRepo,
 } from "./match.repository";
 import { getMatchesWithoutActiveCodesService } from "../access-code/access-code.service";
+import { calculateNextStrike } from "../../utils/strike.engine";
 
 export const createMatchService = async (turfId: string, data: any) => {
   const match = await createMatchRepo({
@@ -71,7 +73,11 @@ export const getMatchPlayersService = async (matchId: string) => {
 
 export const startInningsService = async (
   matchId: string,
-  openingPlayers?: { strikerId: string; nonStrikerId: string; bowlerId: string }
+  openingPlayers?: {
+    strikerId: string;
+    nonStrikerId: string;
+    bowlerId: string;
+  },
 ) => {
   /**
    * 1️⃣ Get match
@@ -117,11 +123,27 @@ export const startInningsService = async (
     battingTeam,
     openingStrikerId: openingPlayers?.strikerId,
     openingNonStrikerId: openingPlayers?.nonStrikerId,
+    currentStrikerId: openingPlayers?.strikerId,
+    currentNonStrikerId: openingPlayers?.nonStrikerId,
+    currentBowlerId: openingPlayers?.bowlerId,
     status: "LIVE",
   });
 
   /**
-   * 5️⃣ Update match
+   * 5️⃣ Create player stats for opening players
+   */
+  if (openingPlayers?.strikerId && openingPlayers?.nonStrikerId && openingPlayers?.bowlerId) {
+    // Create stats for opening batsmen
+    await upsertPlayerMatchStatsRepo(matchId, openingPlayers.strikerId, battingTeam);
+    await upsertPlayerMatchStatsRepo(matchId, openingPlayers.nonStrikerId, battingTeam);
+    
+    // Create stats for opening bowler (bowling team)
+    const bowlingTeam = battingTeam === "A" ? "B" : "A";
+    await upsertPlayerMatchStatsRepo(matchId, openingPlayers.bowlerId, bowlingTeam);
+  }
+
+  /**
+   * 6️⃣ Update match
    */
   await updateMatchRepo(matchId, {
     status: "LIVE",
@@ -130,64 +152,69 @@ export const startInningsService = async (
   });
 
   // Return innings with opening bowler for frontend temporary state
-  return {
-    ...inningsRecord,
-    openingBowlerId: openingPlayers?.bowlerId, // Temporary UI state, not stored
-  };
+  return inningsRecord;
 };
 
 export const addBallService = async (matchId: string, data: any) => {
   const match = await getMatchByIdRepo(matchId);
 
-  if (!match) {
-    throw new Error("Match not found");
-  }
-
+  if (!match) throw new Error("Match not found");
   if (match.status === "COMPLETED") {
-    throw new Error("Match already completed. No more balls allowed.");
+    throw new Error("Match already completed");
   }
 
-  const innings = await getCurrentInningsRepo(matchId, match.currentInnings || 1);
+  const innings = await getCurrentInningsRepo(
+    matchId,
+    match.currentInnings || 1,
+  );
 
-  if (!innings) {
-    throw new Error("No active innings");
-  }
-
+  if (!innings) throw new Error("No active innings");
   if (innings.status === "COMPLETED") {
     throw new Error("Innings already completed");
   }
 
-  // Calculate over and ball numbers
+  /**
+   * 1️⃣ Current batsmen (SOURCE OF TRUTH)
+   */
+  const strikerId = innings.currentStrikerId || innings.openingStrikerId;
+
+  const nonStrikerId =
+    innings.currentNonStrikerId || innings.openingNonStrikerId;
+
+  if (!strikerId || !nonStrikerId) {
+    throw new Error("Current batsmen not set");
+  }
+
+  /**
+   * 2️⃣ Over / ball calculation
+   */
   const lastBall = await getLastBallRepo(matchId);
-  
+
   let overNumber = 1;
   let ballNumber = 1;
-  
+
   if (lastBall) {
     if (lastBall.ballNumber < 6) {
-      // Same over, next ball
       overNumber = lastBall.overNumber;
       ballNumber = lastBall.ballNumber + 1;
     } else {
-      // New over
       overNumber = lastBall.overNumber + 1;
       ballNumber = 1;
     }
   }
 
-  // Calculate runs and extras
-  const totalRuns = (data.runs || 0) + (data.extraRuns || 0);
-  
-  // Determine extra type and runs
+  /**
+   * 3️⃣ Extras & legality
+   */
   let extraType = null;
   let extraRuns = 0;
-  
+
   if (data.isWide) {
     extraType = "WIDE";
-    extraRuns = 1; // Wide ball adds 1 run
+    extraRuns = 1 + (data.runs || 0);
   } else if (data.isNoBall) {
     extraType = "NO_BALL";
-    extraRuns = 1; // No ball adds 1 run
+    extraRuns = 1;
   } else if (data.isByes) {
     extraType = "BYE";
     extraRuns = data.runs || 0;
@@ -196,29 +223,33 @@ export const addBallService = async (matchId: string, data: any) => {
     extraRuns = data.runs || 0;
   }
 
-  // Determine if legal delivery
   const isLegalDelivery = !data.isWide && !data.isNoBall;
+  const totalRuns = (data.runs || 0) + extraRuns;
 
-  // 1️⃣ Save ball
+  /**
+   * 4️⃣ Save ball
+   */
   const ball = await createBallRepo({
     matchId,
-    inningsId: data.inningsId,
+    inningsId: innings.id,
     overNumber,
     ballNumber,
-    batsmanId: data.strikerId, // Frontend sends strikerId
+    batsmanId: strikerId,
     bowlerId: data.bowlerId,
-    runs: isLegalDelivery ? (data.runs || 0) : 0, // Runs from bat only for legal deliveries
+    runs: isLegalDelivery ? data.runs || 0 : 0,
     extraType,
     extraRuns,
     isWicket: data.isWicket || false,
-    wicketType: data.isWicket ? "BOWLED" : null, // Default wicket type
-    dismissedPlayerId: null, // Will be set when wicket details are provided
+    wicketType: data.wicketType || null,
+    dismissedPlayerId: data.dismissedPlayerId || null,
     isLegalDelivery,
   });
 
-  // 2️⃣ Update innings totals
+  /**
+   * 5️⃣ Update innings totals
+   */
   await updateInningsTotalsRepo(
-    data.inningsId,
+    innings.id,
     totalRuns,
     data.isWicket,
     isLegalDelivery,
@@ -240,24 +271,35 @@ export const addBallService = async (matchId: string, data: any) => {
 
   // 3️⃣️⃣ Non-striker stats - ensure non-striker has stats record
   const recentBalls = await getLastBallsRepo(data.inningsId, 6);
-  
+
   if (recentBalls.length === 0) {
     // First ball of innings - create both opening batsmen stats
     const inningsDetails = await getInningsByIdRepo(data.inningsId);
-    if (inningsDetails?.openingStrikerId && inningsDetails?.openingNonStrikerId) {
+    if (
+      inningsDetails?.openingStrikerId &&
+      inningsDetails?.openingNonStrikerId
+    ) {
       const battingTeam = innings.battingTeam;
-      
+
       // Create stats for opening striker
-      await upsertPlayerMatchStatsRepo(matchId, inningsDetails.openingStrikerId, battingTeam);
-      
+      await upsertPlayerMatchStatsRepo(
+        matchId,
+        inningsDetails.openingStrikerId,
+        battingTeam,
+      );
+
       // Create stats for opening non-striker
-      await upsertPlayerMatchStatsRepo(matchId, inningsDetails.openingNonStrikerId, battingTeam);
+      await upsertPlayerMatchStatsRepo(
+        matchId,
+        inningsDetails.openingNonStrikerId,
+        battingTeam,
+      );
     }
   } else {
     // Subsequent balls - find and create non-striker stats
     const lastBall = recentBalls[0];
     const strikerId = lastBall.batsmanId;
-    
+
     // Find non-striker from recent balls
     let nonStrikerId: string | null = null;
     for (const ball of recentBalls) {
@@ -270,7 +312,10 @@ export const addBallService = async (matchId: string, data: any) => {
     // If no non-striker found in recent balls, check innings opening players
     if (!nonStrikerId) {
       const inningsDetails = await getInningsByIdRepo(data.inningsId);
-      if (inningsDetails?.openingNonStrikerId && inningsDetails.openingNonStrikerId !== strikerId) {
+      if (
+        inningsDetails?.openingNonStrikerId &&
+        inningsDetails.openingNonStrikerId !== strikerId
+      ) {
         nonStrikerId = inningsDetails.openingNonStrikerId;
       }
     }
@@ -296,9 +341,39 @@ export const addBallService = async (matchId: string, data: any) => {
     );
   }
 
-  await checkInningsCompletionService(matchId, data.inningsId);
+  /**
+   * 6️⃣ Strike Rotation (ICC Production Logic)
+   */
+  const { nextStriker, nextNonStriker } = calculateNextStrike({
+    strikerId,
+    nonStrikerId,
+    runs: totalRuns,
+    isLegalDelivery,
+    ballNumber,
+    isWicket: data.isWicket,
+    wicketType: data.wicketType,
+    dismissedPlayerId: data.dismissedPlayerId,
+    newBatsmanId: data.newBatsmanId,
+  });
 
-  // 5️⃣ ⭐ Check match result
+  // Update bowler at end of over
+  let currentBowlerId = data.bowlerId;
+  if (ballNumber === 6 && isLegalDelivery) {
+    // Over completed, current bowler will be the one for next over
+    // For now, keep the same bowler - in production, you might want to allow bowler changes
+  }
+
+  await updateInningsCurrentPlayersRepo(
+    innings.id,
+    nextStriker,
+    nextNonStriker,
+    currentBowlerId,
+  );
+
+  /**
+   * 7️⃣ Completion checks
+   */
+  await checkInningsCompletionService(matchId, innings.id);
   await checkMatchResultService(matchId);
 
   return ball;
@@ -382,17 +457,21 @@ export const endInningsService = async (matchId: string) => {
 };
 
 export const getMatchScoreService = async (matchId: string) => {
-  matchServiceLogger.fetching('match score', matchId);
-  
+  matchServiceLogger.fetching("match score", matchId);
+
   const match = await getMatchWithInningsRepo(matchId);
-  
+
   if (!match) {
-    matchServiceLogger.error('fetching match score', new Error('Match not found'), { matchId });
+    matchServiceLogger.error(
+      "fetching match score",
+      new Error("Match not found"),
+      { matchId },
+    );
     throw new Error("Match not found");
   }
 
-  matchServiceLogger.found('match', match, { matchId });
-  
+  matchServiceLogger.found("match", match, { matchId });
+
   const innings = match.innings.map((i) => ({
     id: i.id,
     inningsNumber: i.inningsNumber,
@@ -668,140 +747,99 @@ export const checkInningsCompletionService = async (
 };
 
 const buildLiveScoreDetails = async (inningsId: string) => {
-  // Get last 12 balls (enough to detect over + batsmen)
-  const recentBalls = await getLastBallsRepo(inningsId, 12);
+  const innings = await getInningsByIdRepo(inningsId);
 
-  // If no balls delivered yet, use opening players
-  if (!recentBalls.length) {
-    // Get innings details to get opening players
-    const innings = await getInningsByIdRepo(inningsId);
-    
-    if (!innings?.openingStrikerId || !innings?.openingNonStrikerId) {
-      return null;
-    }
-
-    const playerIds = [innings.openingStrikerId, innings.openingNonStrikerId];
-    const players = await getPlayersByIdsRepo(playerIds);
-    const playerMap = Object.fromEntries(players.map((p) => [p.id, p]));
-
-    return {
-      striker: {
-        id: innings.openingStrikerId,
-        name: playerMap[innings.openingStrikerId]?.name,
-        runs: 0,
-        balls: 0,
-      },
-      nonStriker: {
-        id: innings.openingNonStrikerId,
-        name: playerMap[innings.openingNonStrikerId]?.name,
-        runs: 0,
-        balls: 0,
-      },
-      bowler: null, // Opening bowler handled by frontend temporary state
-      lastOver: [],
-    };
-  }
-
-  const lastBall = recentBalls[0];
-
-  const strikerId = lastBall.batsmanId;
-  const bowlerId = lastBall.bowlerId;
+  if (!innings) return null;
 
   /**
-   * Determine non-striker
+   * 1️⃣ Current batsmen (SOURCE OF TRUTH)
    */
-  let nonStrikerId: string | null = null;
+  const strikerId = innings.currentStrikerId || innings.openingStrikerId;
 
-  for (const ball of recentBalls) {
-    if (ball.batsmanId !== strikerId) {
-      nonStrikerId = ball.batsmanId;
-      break;
-    }
+  const nonStrikerId =
+    innings.currentNonStrikerId || innings.openingNonStrikerId;
+
+  /**
+   * 2️⃣ Last ball for bowler & over summary
+   */
+  const recentBalls = await getLastBallsRepo(inningsId, 12);
+
+  // Get bowler from innings current bowler or last ball
+  let bowlerId = innings.currentBowlerId;
+
+  if (!bowlerId && recentBalls.length > 0) {
+    const lastBall = recentBalls[0];
+    bowlerId = lastBall.bowlerId;
   }
 
-  // If no non-striker found in recent balls (e.g., first ball), check innings opening players
-  if (!nonStrikerId) {
-    const inningsDetails = await getInningsByIdRepo(lastBall.inningsId);
-    if (inningsDetails?.openingStrikerId && inningsDetails?.openingNonStrikerId) {
-      // Determine which opening player is not the current striker
-      if (inningsDetails.openingStrikerId !== strikerId) {
-        nonStrikerId = inningsDetails.openingStrikerId;
-      } else if (inningsDetails.openingNonStrikerId !== strikerId) {
-        nonStrikerId = inningsDetails.openingNonStrikerId;
-      }
-    }
+  let lastOver: string[] = [];
+
+  if (recentBalls.length) {
+    const lastBall = recentBalls[0];
+    const currentOver = lastBall.overNumber;
+
+    lastOver = recentBalls
+      .filter((b) => b.overNumber === currentOver)
+      .reverse()
+      .map((b) => {
+        if (b.isWicket) return "W";
+        if (b.extraType === "WIDE") return "Wd";
+        if (b.extraType === "NO_BALL") return "Nb";
+        return String(b.runs + (b.extraRuns || 0));
+      });
   }
 
+  /**
+   * 3️⃣ Player details
+   */
   const playerIds = [strikerId, nonStrikerId, bowlerId].filter(
     Boolean,
   ) as string[];
 
   const players = await getPlayersByIdsRepo(playerIds);
-
   const playerMap = Object.fromEntries(players.map((p) => [p.id, p]));
 
   /**
-   * Get match stats
+   * 4️⃣ Match stats
    */
-  const stats = await getMatchPlayerStatsRepo(lastBall.matchId);
+  const stats = await getMatchPlayerStatsRepo(innings.matchId);
   const statsMap = Object.fromEntries(stats.map((s) => [s.playerId, s]));
 
-  /**
-   * Current batsmen
-   */
-  const strikerStats = statsMap[strikerId];
-  const nonStrikerStats = nonStrikerId ? statsMap[nonStrikerId] : null;
-
-  /**
-   * Bowler stats
-   */
-  const bowlerStats = statsMap[bowlerId];
-
-  /**
-   * Last over summary
-   */
-  const currentOverNumber = lastBall.overNumber;
-
-  const lastOverBalls = recentBalls
-    .filter((b) => b.overNumber === currentOverNumber)
-    .reverse();
-
-  const lastOver = lastOverBalls.map((b) => {
-    if (b.isWicket) return "W";
-    if (b.extraType === "WIDE") return "Wd";
-    if (b.extraType === "NO_BALL") return "Nb";
-    return String(b.runs + (b.extraRuns || 0));
-  });
-
-  return {
-    striker: strikerStats
+  const striker =
+    strikerId && statsMap[strikerId]
       ? {
           id: strikerId,
           name: playerMap[strikerId]?.name,
-          runs: strikerStats.runs,
-          balls: strikerStats.ballsFaced,
+          runs: statsMap[strikerId].runs,
+          balls: statsMap[strikerId].ballsFaced,
         }
-      : null,
+      : null;
 
-    nonStriker: nonStrikerStats
+  const nonStriker =
+    nonStrikerId && statsMap[nonStrikerId]
       ? {
           id: nonStrikerId,
-          name: playerMap[nonStrikerId!]?.name,
-          runs: nonStrikerStats.runs,
-          balls: nonStrikerStats.ballsFaced,
+          name: playerMap[nonStrikerId]?.name,
+          runs: statsMap[nonStrikerId].runs,
+          balls: statsMap[nonStrikerId].ballsFaced,
         }
-      : null,
+      : null;
 
-    bowler: bowlerStats
+  const bowler =
+    bowlerId && statsMap[bowlerId]
       ? {
           id: bowlerId,
           name: playerMap[bowlerId]?.name,
-          overs: ballsToOvers(bowlerStats.ballsBowled),
-          runs: bowlerStats.runsConceded,
-          wickets: bowlerStats.wickets,
+          overs: ballsToOvers(statsMap[bowlerId].ballsBowled),
+          runs: statsMap[bowlerId].runsConceded,
+          wickets: statsMap[bowlerId].wickets,
         }
-      : null,
+      : null;
 
+  return {
+    striker,
+    nonStriker,
+    bowler,
     lastOver,
   };
 };
