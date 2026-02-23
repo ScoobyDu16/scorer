@@ -30,6 +30,7 @@ export const playerMatchStats = pgTable(
      */
     runs: integer("runs").default(0).notNull(),
     ballsFaced: integer("balls_faced").default(0).notNull(),
+    dotsFaced: integer("dots_faced").default(0).notNull(),
     fours: integer("fours").default(0).notNull(),
     sixes: integer("sixes").default(0).notNull(),
 
@@ -38,6 +39,8 @@ export const playerMatchStats = pgTable(
      */
     wickets: integer("wickets").default(0).notNull(),
     ballsBowled: integer("balls_bowled").default(0).notNull(),
+    dotsBowled: integer("dots_bowled").default(0).notNull(),
+    maidens: integer("maidens").default(0).notNull(),
 
     runsConceded: integer("runs_conceded").default(0).notNull(),
 

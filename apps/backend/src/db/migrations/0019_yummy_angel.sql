@@ -1,0 +1,1 @@
+ALTER TABLE "player_match_stats" ADD COLUMN "maidens" integer DEFAULT 0 NOT NULL;

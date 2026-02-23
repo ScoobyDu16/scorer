@@ -228,10 +228,10 @@ export const ScoringPage: React.FC = () => {
                               {liveData.striker.balls}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              0
+                              {liveData.striker.fours}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              0
+                              {liveData.striker.sixes}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {liveData.striker.balls > 0
@@ -256,10 +256,10 @@ export const ScoringPage: React.FC = () => {
                               {liveData.nonStriker.balls}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              0
+                              {liveData.nonStriker.fours}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              0
+                              {liveData.nonStriker.sixes}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {liveData.nonStriker.balls > 0
@@ -318,7 +318,7 @@ export const ScoringPage: React.FC = () => {
                               {liveData.bowler.overs}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              0
+                              {liveData.bowler.maidens}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {liveData.bowler.runs}

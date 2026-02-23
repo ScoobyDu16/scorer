@@ -8,6 +8,7 @@ import {
   getPlayersByIdsRepo,
   updateBattingStatsRepo,
   updateBowlingStatsRepo,
+  updateMaidensRepo,
   upsertPlayerMatchStatsRepo,
 } from "../player/player.repository";
 import {
@@ -361,6 +362,9 @@ export const addBallService = async (matchId: string, data: any) => {
   if (ballNumber === 6 && isLegalDelivery) {
     // Over completed, current bowler will be the one for next over
     // For now, keep the same bowler - in production, you might want to allow bowler changes
+    
+    // Check for maiden over and update maidens
+    await updateMaidensRepo(matchId, data.bowlerId);
   }
 
   await updateInningsCurrentPlayersRepo(
@@ -812,6 +816,9 @@ const buildLiveScoreDetails = async (inningsId: string) => {
           name: playerMap[strikerId]?.name,
           runs: statsMap[strikerId].runs,
           balls: statsMap[strikerId].ballsFaced,
+          dotsFaced: statsMap[strikerId].dotsFaced,
+          fours: statsMap[strikerId].fours,
+          sixes: statsMap[strikerId].sixes,
         }
       : null;
 
@@ -822,6 +829,9 @@ const buildLiveScoreDetails = async (inningsId: string) => {
           name: playerMap[nonStrikerId]?.name,
           runs: statsMap[nonStrikerId].runs,
           balls: statsMap[nonStrikerId].ballsFaced,
+          dotsFaced: statsMap[nonStrikerId].dotsFaced,
+          fours: statsMap[nonStrikerId].fours,
+          sixes: statsMap[nonStrikerId].sixes,
         }
       : null;
 
@@ -833,6 +843,8 @@ const buildLiveScoreDetails = async (inningsId: string) => {
           overs: ballsToOvers(statsMap[bowlerId].ballsBowled),
           runs: statsMap[bowlerId].runsConceded,
           wickets: statsMap[bowlerId].wickets,
+          dotsBowled: statsMap[bowlerId].dotsBowled,
+          maidens: statsMap[bowlerId].maidens,
         }
       : null;
 

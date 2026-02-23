@@ -113,10 +113,13 @@ export const getPlayerCareerStatsRepo = async (playerId: string) => {
       matches: count(playerMatchStats.matchId),
       runs: sum(playerMatchStats.runs),
       ballsFaced: sum(playerMatchStats.ballsFaced),
+      dotsFaced: sum(playerMatchStats.dotsFaced),
       fours: sum(playerMatchStats.fours),
       sixes: sum(playerMatchStats.sixes),
       wickets: sum(playerMatchStats.wickets),
       ballsBowled: sum(playerMatchStats.ballsBowled),
+      dotsBowled: sum(playerMatchStats.dotsBowled),
+      maidens: sum(playerMatchStats.maidens),
       runsConceded: sum(playerMatchStats.runsConceded),
     })
     .from(playerMatchStats)
@@ -168,12 +171,14 @@ export const updateBattingStatsRepo = async (
   const ballsIncrement = isLegalDelivery ? 1 : 0;
   const fours = runs === 4 ? 1 : 0;
   const sixes = runs === 6 ? 1 : 0;
+  const dots = isLegalDelivery && runs === 0 ? 1 : 0;
 
   await db.execute(sql`
     UPDATE player_match_stats
     SET
       runs = runs + ${runs},
       balls_faced = balls_faced + ${ballsIncrement},
+      dots_faced = dots_faced + ${dots},
       fours = fours + ${fours},
       sixes = sixes + ${sixes}
     WHERE match_id = ${matchId}
@@ -193,16 +198,73 @@ export const updateBowlingStatsRepo = async (
 ) => {
   const ballsIncrement = isLegalDelivery ? 1 : 0;
   const wickets = isWicket ? 1 : 0;
+  const dots = isLegalDelivery && totalRuns === 0 ? 1 : 0;
 
   await db.execute(sql`
     UPDATE player_match_stats
     SET
       balls_bowled = balls_bowled + ${ballsIncrement},
+      dots_bowled = dots_bowled + ${dots},
       runs_conceded = runs_conceded + ${totalRuns},
       wickets = wickets + ${wickets}
     WHERE match_id = ${matchId}
       AND player_id = ${playerId}
   `);
+};
+
+/**
+ * Update maidens for bowler (call at end of each over)
+ */
+export const updateMaidensRepo = async (
+  matchId: string,
+  playerId: string,
+) => {
+  // Get current bowler stats
+  const [currentStats] = await db
+    .select()
+    .from(playerMatchStats)
+    .where(
+      and(
+        eq(playerMatchStats.matchId, matchId),
+        eq(playerMatchStats.playerId, playerId),
+      ),
+    );
+
+  if (!currentStats) return;
+
+  // Calculate runs conceded in current over (last 6 legal balls)
+  const ballsInCurrentOver = currentStats.ballsBowled % 6;
+  
+  // If just completed an over (6 balls) and runs in this over were 0, increment maidens
+  if (ballsInCurrentOver === 0) {
+    // Get runs in the last over by checking recent balls
+    const recentBalls = await db
+      .select({
+        runs: sql`runs + extra_runs`,
+        isLegal: sql`is_legal_delivery`,
+      })
+      .from(sql`balls`)
+      .where(
+        and(
+          sql`match_id = ${matchId}`,
+          sql`bowler_id = ${playerId}`,
+          sql`is_legal_delivery = true`,
+        ),
+      )
+      .orderBy(sql`created_at DESC`)
+      .limit(6);
+
+    const runsInOver = recentBalls.reduce((sum: number, ball: any) => sum + (ball.runs || 0), 0);
+    
+    if (runsInOver === 0) {
+      await db.execute(sql`
+        UPDATE player_match_stats
+        SET maidens = maidens + 1
+        WHERE match_id = ${matchId}
+          AND player_id = ${playerId}
+      `);
+    }
+  }
 };
 
 export const getMatchPlayerStatsRepo = async (matchId: string) => {
