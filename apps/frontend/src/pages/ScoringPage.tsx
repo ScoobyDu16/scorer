@@ -122,19 +122,17 @@ export const ScoringPage: React.FC = () => {
   };
 
   const formatOvers = (overs: number) => {
-    // If already a decimal (from backend), return as is
+    // If already a decimal (from backend), return as is with 1 decimal place
     if (overs % 1 !== 0) {
       return overs.toFixed(1);
     }
-    // If integer balls, convert to overs format
-    const oversInt = Math.floor(overs / 6);
-    const remainingBalls = overs % 6;
-    return `${oversInt}.${remainingBalls}`;
+    // If integer, it represents complete overs, add .0
+    return `${overs}.0`;
   };
 
   const calculateRunRate = (runs: number, overs: number) => {
     if (overs === 0) return "0.00";
-    return ((runs / overs) * 6).toFixed(2);
+    return (runs / overs).toFixed(2);
   };
 
   const calculateRequiredRunRate = (
