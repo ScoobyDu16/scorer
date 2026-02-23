@@ -147,29 +147,73 @@ export const addBallService = async (matchId: string, data: any) => {
     throw new Error("Match already completed. No more balls allowed.");
   }
 
-  const innings = await getCurrentInningsRepo(matchId, match.currentInnings);
+  const innings = await getCurrentInningsRepo(matchId, match.currentInnings || 1);
 
-  if (!innings || innings.status === "COMPLETED") {
+  if (!innings) {
+    throw new Error("No active innings");
+  }
+
+  if (innings.status === "COMPLETED") {
     throw new Error("Innings already completed");
   }
 
+  // Calculate over and ball numbers
+  const lastBall = await getLastBallRepo(matchId);
+  
+  let overNumber = 1;
+  let ballNumber = 1;
+  
+  if (lastBall) {
+    if (lastBall.ballNumber < 6) {
+      // Same over, next ball
+      overNumber = lastBall.overNumber;
+      ballNumber = lastBall.ballNumber + 1;
+    } else {
+      // New over
+      overNumber = lastBall.overNumber + 1;
+      ballNumber = 1;
+    }
+  }
+
+  // Calculate runs and extras
   const totalRuns = (data.runs || 0) + (data.extraRuns || 0);
+  
+  // Determine extra type and runs
+  let extraType = null;
+  let extraRuns = 0;
+  
+  if (data.isWide) {
+    extraType = "WIDE";
+    extraRuns = 1; // Wide ball adds 1 run
+  } else if (data.isNoBall) {
+    extraType = "NO_BALL";
+    extraRuns = 1; // No ball adds 1 run
+  } else if (data.isByes) {
+    extraType = "BYE";
+    extraRuns = data.runs || 0;
+  } else if (data.isLegByes) {
+    extraType = "LEG_BYE";
+    extraRuns = data.runs || 0;
+  }
+
+  // Determine if legal delivery
+  const isLegalDelivery = !data.isWide && !data.isNoBall;
 
   // 1️⃣ Save ball
   const ball = await createBallRepo({
     matchId,
     inningsId: data.inningsId,
-    overNumber: data.overNumber,
-    ballNumber: data.ballNumber,
-    batsmanId: data.batsmanId,
+    overNumber,
+    ballNumber,
+    batsmanId: data.strikerId, // Frontend sends strikerId
     bowlerId: data.bowlerId,
-    runs: data.runs,
-    extraType: data.extraType,
-    extraRuns: data.extraRuns,
-    isWicket: data.isWicket,
-    wicketType: data.wicketType,
-    dismissedPlayerId: data.dismissedPlayerId,
-    isLegalDelivery: data.isLegalDelivery,
+    runs: isLegalDelivery ? (data.runs || 0) : 0, // Runs from bat only for legal deliveries
+    extraType,
+    extraRuns,
+    isWicket: data.isWicket || false,
+    wicketType: data.isWicket ? "BOWLED" : null, // Default wicket type
+    dismissedPlayerId: null, // Will be set when wicket details are provided
+    isLegalDelivery,
   });
 
   // 2️⃣ Update innings totals
@@ -177,31 +221,34 @@ export const addBallService = async (matchId: string, data: any) => {
     data.inningsId,
     totalRuns,
     data.isWicket,
-    data.isLegalDelivery,
+    isLegalDelivery,
   );
 
   // 3️⃣ Batting stats
-  if (data.batsmanId) {
-    await upsertPlayerMatchStatsRepo(matchId, data.batsmanId, data.battingTeam);
+  const batsmanId = data.strikerId || data.batsmanId; // Handle both parameter names
+  if (batsmanId) {
+    const battingTeam = innings.battingTeam; // Get team from current innings
+    await upsertPlayerMatchStatsRepo(matchId, batsmanId, battingTeam);
 
     await updateBattingStatsRepo(
       matchId,
-      data.batsmanId,
+      batsmanId,
       data.runs || 0,
-      data.isLegalDelivery,
+      isLegalDelivery,
     );
   }
 
   // 4️⃣ Bowling stats
   if (data.bowlerId) {
-    await upsertPlayerMatchStatsRepo(matchId, data.bowlerId, data.bowlingTeam);
+    const bowlingTeam = innings.battingTeam === "A" ? "B" : "A"; // Opposite team
+    await upsertPlayerMatchStatsRepo(matchId, data.bowlerId, bowlingTeam);
 
     await updateBowlingStatsRepo(
       matchId,
       data.bowlerId,
       totalRuns,
       data.isWicket,
-      data.isLegalDelivery,
+      isLegalDelivery,
     );
   }
 

@@ -13,7 +13,6 @@ export const ScoringPage: React.FC = () => {
   const locationState = location.state as { openingBowlerId?: string } | null;
   const openingBowlerId = locationState?.openingBowlerId;
 
-  const [selectedRuns, setSelectedRuns] = useState<number>(0);
   const [isWide, setIsWide] = useState(false);
   const [isNoBall, setIsNoBall] = useState(false);
   const [isByes, setIsByes] = useState(false);
@@ -80,6 +79,7 @@ export const ScoringPage: React.FC = () => {
   // Add ball mutation
   const addBallMutation = useMutation({
     mutationFn: (data: {
+      matchId: string;
       inningsId: string;
       strikerId: string;
       bowlerId: string;
@@ -92,8 +92,7 @@ export const ScoringPage: React.FC = () => {
     }) => matchAPI.addBall(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
-      // Reset form
-      setSelectedRuns(0);
+      // Reset extras only, keep selectedRuns for next ball
       setIsWide(false);
       setIsNoBall(false);
       setIsByes(false);
@@ -105,14 +104,15 @@ export const ScoringPage: React.FC = () => {
     },
   });
 
-  const handleScoreBall = () => {
+  const handleScoreBall = (runs?: number) => {
     if (!currentInnings || !currentPlayers.striker) return;
 
     addBallMutation.mutate({
+      matchId: matchId!,
       inningsId: currentInnings.id,
       strikerId: currentPlayers.striker.id,
       bowlerId: currentPlayers.bowler?.id || "", // Need to handle first ball case
-      runs: selectedRuns,
+      runs: runs !== undefined ? runs : 0, // Use parameter or default
       isWide,
       isNoBall,
       isByes,
@@ -121,16 +121,20 @@ export const ScoringPage: React.FC = () => {
     });
   };
 
-  const formatOvers = (balls: number) => {
-    const overs = Math.floor(balls / 6);
-    const remainingBalls = balls % 6;
-    return `${overs}.${remainingBalls}`;
+  const formatOvers = (overs: number) => {
+    // If already a decimal (from backend), return as is
+    if (overs % 1 !== 0) {
+      return overs.toFixed(1);
+    }
+    // If integer balls, convert to overs format
+    const oversInt = Math.floor(overs / 6);
+    const remainingBalls = overs % 6;
+    return `${oversInt}.${remainingBalls}`;
   };
 
-  const calculateRunRate = (runs: number, balls: number) => {
-    if (balls === 0) return 0;
-    const overs = balls / 6;
-    return (runs / overs).toFixed(2);
+  const calculateRunRate = (runs: number, overs: number) => {
+    if (overs === 0) return "0.00";
+    return ((runs / overs) * 6).toFixed(2);
   };
 
   const calculateRequiredRunRate = (
@@ -240,47 +244,62 @@ export const ScoringPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {/* Will be populated with actual batsman data */}
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {currentPlayers.striker?.name}*
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0.00
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {currentPlayers.nonStriker?.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0.00
-                          </td>
-                        </tr>
+                        {liveData?.striker && (
+                          <tr>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {liveData.striker.name}*
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.striker.runs}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.striker.balls}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              0
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              0
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.striker.balls > 0
+                                ? (
+                                    (liveData.striker.runs /
+                                      liveData.striker.balls) *
+                                    100
+                                  ).toFixed(2)
+                                : "0.00"}
+                            </td>
+                          </tr>
+                        )}
+                        {liveData?.nonStriker && (
+                          <tr>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {liveData.nonStriker.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.nonStriker.runs}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.nonStriker.balls}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              0
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              0
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.nonStriker.balls > 0
+                                ? (
+                                    (liveData.nonStriker.runs /
+                                      liveData.nonStriker.balls) *
+                                    100
+                                  ).toFixed(2)
+                                : "0.00"}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -318,27 +337,32 @@ export const ScoringPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {/* Will be populated with actual bowler data */}
-                        <tr>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {currentPlayers.bowler?.name || "Not set"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0.0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            0.00
-                          </td>
-                        </tr>
+                        {liveData?.bowler && (
+                          <tr>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {liveData.bowler.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.bowler.overs}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              0
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.bowler.runs}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.bowler.wickets}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {liveData.bowler.overs > 0
+                                ? (
+                                    liveData.bowler.runs / liveData.bowler.overs
+                                  ).toFixed(2)
+                                : "0.00"}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -379,12 +403,10 @@ export const ScoringPage: React.FC = () => {
                       {[0, 1, 2, 3, 4, 5, 6].map((runs) => (
                         <button
                           key={runs}
-                          onClick={() => setSelectedRuns(runs)}
-                          className={`px-4 py-3 text-sm font-medium rounded-md ${
-                            selectedRuns === runs
-                              ? "bg-green-600 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
+                          onClick={() => {
+                            handleScoreBall(runs);
+                          }}
+                          className="px-4 py-3 text-sm font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
                         >
                           {runs}
                         </button>
@@ -448,14 +470,6 @@ export const ScoringPage: React.FC = () => {
 
                   {/* Action Buttons */}
                   <div className="space-y-2">
-                    <button
-                      onClick={handleScoreBall}
-                      disabled={addBallMutation.isPending}
-                      className="w-full px-4 py-3 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {addBallMutation.isPending ? "Scoring..." : "Score Ball"}
-                    </button>
-
                     <div className="grid grid-cols-2 gap-2">
                       <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200">
                         Undo Ball

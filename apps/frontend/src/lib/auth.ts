@@ -99,6 +99,7 @@ export const matchAPI = {
   },
 
   addBall: async (data: {
+    matchId: string;
     inningsId: string;
     strikerId: string;
     bowlerId: string;
@@ -109,7 +110,7 @@ export const matchAPI = {
     isLegByes: boolean;
     isWicket: boolean;
   }): Promise<any> => {
-    const response = await api.post(`/balls`, data);
+    const response = await api.post(`/matches/${data.matchId}/balls`, data);
     return response.data;
   },
 
