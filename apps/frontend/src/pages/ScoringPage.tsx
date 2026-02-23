@@ -74,7 +74,6 @@ export const ScoringPage: React.FC = () => {
   };
 
   const currentPlayers = getCurrentPlayers();
-  const balls = liveData?.balls || [];
 
   // Add ball mutation
   const addBallMutation = useMutation({
@@ -261,12 +260,12 @@ export const ScoringPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {liveData.striker.balls > 0
-                                ? (
+                                ? Math.round(
                                     (liveData.striker.runs /
                                       liveData.striker.balls) *
-                                    100
-                                  ).toFixed(2)
-                                : "0.00"}
+                                      100,
+                                  )
+                                : 0}
                             </td>
                           </tr>
                         )}
@@ -289,12 +288,12 @@ export const ScoringPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {liveData.nonStriker.balls > 0
-                                ? (
+                                ? Math.round(
                                     (liveData.nonStriker.runs /
                                       liveData.nonStriker.balls) *
-                                    100
-                                  ).toFixed(2)
-                                : "0.00"}
+                                      100,
+                                  )
+                                : 0}
                             </td>
                           </tr>
                         )}
@@ -374,12 +373,12 @@ export const ScoringPage: React.FC = () => {
                     Recent Balls
                   </h2>
                   <div className="flex space-x-2 overflow-x-auto">
-                    {balls?.slice(-6).map((ball: any) => (
+                    {liveData?.lastOver?.map((ball: string, index: number) => (
                       <div
-                        key={ball.id}
+                        key={index}
                         className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-sm font-medium"
                       >
-                        {ball.runs}
+                        {ball}
                       </div>
                     ))}
                   </div>
