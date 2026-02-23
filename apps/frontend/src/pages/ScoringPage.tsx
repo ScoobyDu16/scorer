@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { matchAPI } from "../lib/auth";
@@ -14,11 +14,36 @@ export const ScoringPage: React.FC = () => {
   const [isLegByes, setIsLegByes] = useState(false);
   const [isWicket, setIsWicket] = useState(false);
 
+  // Bowler selection modal state
+  const [showBowlerSelection, setShowBowlerSelection] = useState(false);
+  const [selectedNewBowler, setSelectedNewBowler] = useState<string>("");
+
   // Fetch match score data (includes current innings and live data)
   const { data: matchScore, isLoading: scoreLoading } = useQuery({
     queryKey: ["matchScore", matchId],
     queryFn: () => matchAPI.getMatchScore(matchId!),
     enabled: !!matchId,
+  });
+
+  // Fetch match players for bowler selection
+  const { data: matchPlayers } = useQuery({
+    queryKey: ["matchPlayers", matchId],
+    queryFn: () => matchAPI.getMatchPlayers(matchId!),
+    enabled: !!matchId,
+  });
+
+  // Change bowler mutation
+  const changeBowlerMutation = useMutation({
+    mutationFn: (data: { inningsId: string; newBowlerId: string }) =>
+      matchAPI.changeBowler(data.inningsId, data.newBowlerId),
+    onSuccess: () => {
+      setShowBowlerSelection(false);
+      setSelectedNewBowler("");
+      queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
+    },
+    onError: (error: any) => {
+      alert(`Error changing bowler: ${error.message}`);
+    },
   });
 
   // Extract data from match score response
@@ -47,6 +72,42 @@ export const ScoringPage: React.FC = () => {
   };
 
   const currentPlayers = getCurrentPlayers();
+
+  // Detect over completion and show bowler selection modal
+  useEffect(() => {
+    if (liveData?.isOverCompleted && currentInnings) {
+      setShowBowlerSelection(true);
+    }
+  }, [liveData?.isOverCompleted, currentInnings]);
+
+  // Get available bowlers (bowling team players, excluding current bowler)
+  const getAvailableBowlers = () => {
+    if (!matchPlayers || !currentInnings || !liveData?.bowler) return [];
+
+    const bowlingTeam = currentInnings.battingTeam === "A" ? "B" : "A";
+    const currentBowlerId = liveData.bowler.id;
+
+    return matchPlayers
+      .filter((player: any) => player.team === bowlingTeam)
+      .filter((player: any) => player.playerId !== currentBowlerId)
+      .map((player: any) => ({
+        id: player.playerId,
+        name: player.player?.name || player.playerId,
+      }));
+  };
+
+  // Handle bowler change
+  const handleBowlerChange = () => {
+    if (!selectedNewBowler || !currentInnings) {
+      alert("Please select a bowler");
+      return;
+    }
+
+    changeBowlerMutation.mutate({
+      inningsId: currentInnings.id,
+      newBowlerId: selectedNewBowler,
+    });
+  };
 
   // Add ball mutation
   const addBallMutation = useMutation({
@@ -472,6 +533,51 @@ export const ScoringPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Bowler Selection Modal */}
+      {showBowlerSelection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Select Next Bowler
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose a bowler from the bowling team. Same bowler cannot bowl consecutive overs (ICC rule).
+            </p>
+            
+            <div className="mb-4">
+              <select
+                value={selectedNewBowler}
+                onChange={(e) => setSelectedNewBowler(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select bowler...</option>
+                {getAvailableBowlers().map((bowler: { id: string; name: string }) => (
+                  <option key={bowler.id} value={bowler.id}>
+                    {bowler.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowBowlerSelection(false)}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBowlerChange}
+                disabled={!selectedNewBowler || changeBowlerMutation.isPending}
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              >
+                {changeBowlerMutation.isPending ? "Changing..." : "Change Bowler"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

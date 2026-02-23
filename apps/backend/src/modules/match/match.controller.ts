@@ -4,6 +4,7 @@ import { matchLogger as businessLogger } from "../../utils/business-logger";
 import {
   addBallService,
   addMatchPlayersService,
+  changeBowlerService,
   createMatchService,
   endInningsService,
   getMatchScoreService,
@@ -161,6 +162,24 @@ export const undoLastBall = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     businessLogger.error('undoing last ball', error, { matchId: req.params.matchId });
     res.status(400).json({ message: error.message });
+  }
+};
+
+export const changeBowler = async (req: AuthRequest, res: Response) => {
+  try {
+    const inningsId = req.params.inningsId as string;
+    const { newBowlerId } = req.body;
+
+    businessLogger.start('changing bowler', { inningsId, newBowlerId });
+
+    const result = await changeBowlerService(inningsId, newBowlerId);
+    
+    businessLogger.success('bowler changed', { inningsId, newBowlerId });
+    
+    res.json(result);
+  } catch (error: any) {
+    businessLogger.error('changing bowler', error, { inningsId: req.params.inningsId });
+    res.status(500).json({ message: error.message });
   }
 };
 

@@ -156,6 +156,36 @@ export const startInningsService = async (
   return inningsRecord;
 };
 
+export const changeBowlerService = async (
+  inningsId: string,
+  newBowlerId: string,
+) => {
+  const innings = await getInningsByIdRepo(inningsId);
+  if (!innings) {
+    throw new Error("Innings not found");
+  }
+
+  // Get current bowler to enforce ICC rule (no consecutive overs)
+  const currentBowlerId = innings.currentBowlerId;
+  if (currentBowlerId === newBowlerId) {
+    throw new Error("Same bowler cannot bowl consecutive overs (ICC rule)");
+  }
+
+  // Create player stats for new bowler if not exists
+  const bowlingTeam = innings.battingTeam === "A" ? "B" : "A";
+  await upsertPlayerMatchStatsRepo(innings.matchId, newBowlerId, bowlingTeam);
+
+  // Update current bowler in innings
+  await updateInningsCurrentPlayersRepo(
+    inningsId,
+    innings.currentStrikerId || innings.openingStrikerId || "",
+    innings.currentNonStrikerId || innings.openingNonStrikerId || "",
+    newBowlerId,
+  );
+
+  return { success: true, newBowlerId };
+};
+
 export const addBallService = async (matchId: string, data: any) => {
   const match = await getMatchByIdRepo(matchId);
 
@@ -181,6 +211,9 @@ export const addBallService = async (matchId: string, data: any) => {
 
   const nonStrikerId =
     innings.currentNonStrikerId || innings.openingNonStrikerId;
+
+  // Get current bowler from innings (backend-controlled)
+  const currentBowlerId = innings.currentBowlerId;
 
   if (!strikerId || !nonStrikerId) {
     throw new Error("Current batsmen not set");
@@ -236,7 +269,7 @@ export const addBallService = async (matchId: string, data: any) => {
     overNumber,
     ballNumber,
     batsmanId: strikerId,
-    bowlerId: data.bowlerId,
+    bowlerId: currentBowlerId || data.bowlerId, // Use backend-controlled bowler
     runs: isLegalDelivery ? data.runs || 0 : 0,
     extraType,
     extraRuns,
@@ -329,13 +362,13 @@ export const addBallService = async (matchId: string, data: any) => {
   }
 
   // 4️⃣ Bowling stats
-  if (data.bowlerId) {
+  if (currentBowlerId) {
     const bowlingTeam = innings.battingTeam === "A" ? "B" : "A"; // Opposite team
-    await upsertPlayerMatchStatsRepo(matchId, data.bowlerId, bowlingTeam);
+    await upsertPlayerMatchStatsRepo(matchId, currentBowlerId, bowlingTeam);
 
     await updateBowlingStatsRepo(
       matchId,
-      data.bowlerId,
+      currentBowlerId,
       totalRuns,
       data.isWicket,
       isLegalDelivery,
@@ -358,20 +391,21 @@ export const addBallService = async (matchId: string, data: any) => {
   });
 
   // Update bowler at end of over
-  let currentBowlerId = data.bowlerId;
   if (ballNumber === 6 && isLegalDelivery) {
-    // Over completed, current bowler will be the one for next over
-    // For now, keep the same bowler - in production, you might want to allow bowler changes
+    // Over completed - keep same bowler for now
+    // In production, you might want to allow bowler changes
     
     // Check for maiden over and update maidens
-    await updateMaidensRepo(matchId, data.bowlerId);
+    if (currentBowlerId) {
+      await updateMaidensRepo(matchId, currentBowlerId);
+    }
   }
 
   await updateInningsCurrentPlayersRepo(
     innings.id,
     nextStriker,
     nextNonStriker,
-    currentBowlerId,
+    currentBowlerId || undefined, // Keep same bowler, convert null to undefined
   );
 
   /**
@@ -776,6 +810,8 @@ const buildLiveScoreDetails = async (inningsId: string) => {
     bowlerId = lastBall.bowlerId;
   }
 
+  // Check if over is completed (6th legal ball)
+  let isOverCompleted = false;
   let lastOver: string[] = [];
 
   if (recentBalls.length) {
@@ -791,6 +827,9 @@ const buildLiveScoreDetails = async (inningsId: string) => {
         if (b.extraType === "NO_BALL") return "Nb";
         return String(b.runs + (b.extraRuns || 0));
       });
+
+    // Check if last ball was 6th legal delivery
+    isOverCompleted = lastBall.ballNumber === 6 && lastBall.isLegalDelivery;
   }
 
   /**
@@ -836,15 +875,15 @@ const buildLiveScoreDetails = async (inningsId: string) => {
       : null;
 
   const bowler =
-    bowlerId && statsMap[bowlerId]
+    bowlerId
       ? {
           id: bowlerId,
           name: playerMap[bowlerId]?.name,
-          overs: ballsToOvers(statsMap[bowlerId].ballsBowled),
-          runs: statsMap[bowlerId].runsConceded,
-          wickets: statsMap[bowlerId].wickets,
-          dotsBowled: statsMap[bowlerId].dotsBowled,
-          maidens: statsMap[bowlerId].maidens,
+          overs: statsMap[bowlerId] ? ballsToOvers(statsMap[bowlerId].ballsBowled) : "0.0",
+          runs: statsMap[bowlerId]?.runsConceded || 0,
+          wickets: statsMap[bowlerId]?.wickets || 0,
+          dotsBowled: statsMap[bowlerId]?.dotsBowled || 0,
+          maidens: statsMap[bowlerId]?.maidens || 0,
         }
       : null;
 
@@ -853,5 +892,6 @@ const buildLiveScoreDetails = async (inningsId: string) => {
     nonStriker,
     bowler,
     lastOver,
+    isOverCompleted,
   };
 };

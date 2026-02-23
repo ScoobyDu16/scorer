@@ -153,6 +153,11 @@ export const matchAPI = {
     const response = await api.get(`/matches/${matchId}/players`);
     return response.data;
   },
+
+  changeBowler: async (inningsId: string, newBowlerId: string) => {
+    const response = await api.post(`/innings/${inningsId}/change-bowler`, { newBowlerId });
+    return response.data;
+  },
 };
 
 export const dashboardAPI = {
