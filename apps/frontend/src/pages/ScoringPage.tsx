@@ -63,7 +63,8 @@ export const ScoringPage: React.FC = () => {
     }
 
     // Derive from latest ball
-    const latestBall = liveData.balls[liveData.balls.length - 1];
+    const lastOverBalls = liveData?.recentBalls || [];
+    const latestBall = lastOverBalls[lastOverBalls.length - 1];
     return {
       striker: latestBall.strikerId,
       nonStriker: null, // Need to track strike rotation
@@ -96,7 +97,48 @@ export const ScoringPage: React.FC = () => {
       }));
   };
 
-  // Handle bowler change
+  // Handle extra type changes - only allow one at a time
+  const handleExtraChange = (extraType: 'wide' | 'noBall' | 'byes' | 'legByes', value: boolean) => {
+    if (!value) {
+      // If unchecking, just update that type
+      switch (extraType) {
+        case 'wide':
+          setIsWide(false);
+          break;
+        case 'noBall':
+          setIsNoBall(false);
+          break;
+        case 'byes':
+          setIsByes(false);
+          break;
+        case 'legByes':
+          setIsLegByes(false);
+          break;
+      }
+    } else {
+      // If checking, uncheck all others first
+      setIsWide(false);
+      setIsNoBall(false);
+      setIsByes(false);
+      setIsLegByes(false);
+      
+      // Then check the selected one
+      switch (extraType) {
+        case 'wide':
+          setIsWide(true);
+          break;
+        case 'noBall':
+          setIsNoBall(true);
+          break;
+        case 'byes':
+          setIsByes(true);
+          break;
+        case 'legByes':
+          setIsLegByes(true);
+          break;
+      }
+    }
+  };
   const handleBowlerChange = () => {
     if (!selectedNewBowler || !currentInnings) {
       alert("Please select a bowler");
@@ -415,10 +457,14 @@ export const ScoringPage: React.FC = () => {
                     Recent Balls
                   </h2>
                   <div className="flex space-x-2 overflow-x-auto">
-                    {liveData?.lastOver?.map((ball: string, index: number) => (
+                    {liveData?.recentBalls?.map((ball: string, index: number) => (
                       <div
                         key={index}
-                        className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-sm font-medium"
+                        className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center text-sm font-medium ${
+                          ball === "|" 
+                            ? "bg-blue-500 text-white" 
+                            : "bg-gray-100"
+                        }`}
                       >
                         {ball}
                       </div>
@@ -445,7 +491,12 @@ export const ScoringPage: React.FC = () => {
                           onClick={() => {
                             handleScoreBall(runs);
                           }}
-                          className="px-4 py-3 text-sm font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          disabled={runs === 0 && (isByes || isLegByes)}
+                          className={`px-4 py-3 text-sm font-medium rounded-md ${
+                            runs === 0 && (isByes || isLegByes)
+                              ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
                         >
                           {runs}
                         </button>
@@ -463,7 +514,7 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isWide}
-                          onChange={(e) => setIsWide(e.target.checked)}
+                          onChange={(e) => handleExtraChange('wide', e.target.checked)}
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Wide</span>
@@ -472,7 +523,7 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isNoBall}
-                          onChange={(e) => setIsNoBall(e.target.checked)}
+                          onChange={(e) => handleExtraChange('noBall', e.target.checked)}
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">No Ball</span>
@@ -481,7 +532,7 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isByes}
-                          onChange={(e) => setIsByes(e.target.checked)}
+                          onChange={(e) => handleExtraChange('byes', e.target.checked)}
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Byes</span>
@@ -490,7 +541,7 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isLegByes}
-                          onChange={(e) => setIsLegByes(e.target.checked)}
+                          onChange={(e) => handleExtraChange('legByes', e.target.checked)}
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Leg Byes</span>
