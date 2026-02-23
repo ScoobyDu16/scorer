@@ -131,7 +131,9 @@ export const ScoringPage: React.FC = () => {
 
   const calculateRunRate = (runs: number, overs: number) => {
     if (overs === 0) return "0.00";
-    return (runs / overs).toFixed(2);
+    // Convert cricket notation (0.3 = 3 balls) to decimal overs (0.5 = 3 balls)
+    const decimalOvers = Math.floor(overs) + (overs % 1) * 10 / 6;
+    return (runs / decimalOvers).toFixed(2);
   };
 
   const calculateRequiredRunRate = (
@@ -353,9 +355,11 @@ export const ScoringPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {liveData.bowler.overs > 0
-                                ? (
-                                    liveData.bowler.runs / liveData.bowler.overs
-                                  ).toFixed(2)
+                                ? (() => {
+                                    // Convert cricket notation (0.3 = 3 balls) to decimal overs (0.5 = 3 balls)
+                                    const decimalOvers = Math.floor(liveData.bowler.overs) + (liveData.bowler.overs % 1) * 10 / 6;
+                                    return (liveData.bowler.runs / decimalOvers).toFixed(2);
+                                  })()
                                 : "0.00"}
                             </td>
                           </tr>

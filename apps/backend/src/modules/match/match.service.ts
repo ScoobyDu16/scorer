@@ -238,6 +238,50 @@ export const addBallService = async (matchId: string, data: any) => {
     );
   }
 
+  // 3️⃣️⃣ Non-striker stats - ensure non-striker has stats record
+  const recentBalls = await getLastBallsRepo(data.inningsId, 6);
+  
+  if (recentBalls.length === 0) {
+    // First ball of innings - create both opening batsmen stats
+    const inningsDetails = await getInningsByIdRepo(data.inningsId);
+    if (inningsDetails?.openingStrikerId && inningsDetails?.openingNonStrikerId) {
+      const battingTeam = innings.battingTeam;
+      
+      // Create stats for opening striker
+      await upsertPlayerMatchStatsRepo(matchId, inningsDetails.openingStrikerId, battingTeam);
+      
+      // Create stats for opening non-striker
+      await upsertPlayerMatchStatsRepo(matchId, inningsDetails.openingNonStrikerId, battingTeam);
+    }
+  } else {
+    // Subsequent balls - find and create non-striker stats
+    const lastBall = recentBalls[0];
+    const strikerId = lastBall.batsmanId;
+    
+    // Find non-striker from recent balls
+    let nonStrikerId: string | null = null;
+    for (const ball of recentBalls) {
+      if (ball.batsmanId !== strikerId) {
+        nonStrikerId = ball.batsmanId;
+        break;
+      }
+    }
+
+    // If no non-striker found in recent balls, check innings opening players
+    if (!nonStrikerId) {
+      const inningsDetails = await getInningsByIdRepo(data.inningsId);
+      if (inningsDetails?.openingNonStrikerId && inningsDetails.openingNonStrikerId !== strikerId) {
+        nonStrikerId = inningsDetails.openingNonStrikerId;
+      }
+    }
+
+    // Create non-striker stats record if found
+    if (nonStrikerId) {
+      const battingTeam = innings.battingTeam;
+      await upsertPlayerMatchStatsRepo(matchId, nonStrikerId, battingTeam);
+    }
+  }
+
   // 4️⃣ Bowling stats
   if (data.bowlerId) {
     const bowlingTeam = innings.battingTeam === "A" ? "B" : "A"; // Opposite team
@@ -672,6 +716,19 @@ const buildLiveScoreDetails = async (inningsId: string) => {
     if (ball.batsmanId !== strikerId) {
       nonStrikerId = ball.batsmanId;
       break;
+    }
+  }
+
+  // If no non-striker found in recent balls (e.g., first ball), check innings opening players
+  if (!nonStrikerId) {
+    const inningsDetails = await getInningsByIdRepo(lastBall.inningsId);
+    if (inningsDetails?.openingStrikerId && inningsDetails?.openingNonStrikerId) {
+      // Determine which opening player is not the current striker
+      if (inningsDetails.openingStrikerId !== strikerId) {
+        nonStrikerId = inningsDetails.openingStrikerId;
+      } else if (inningsDetails.openingNonStrikerId !== strikerId) {
+        nonStrikerId = inningsDetails.openingNonStrikerId;
+      }
     }
   }
 
