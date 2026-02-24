@@ -1,5 +1,5 @@
 import { db } from "../../db/client";
-import { players } from "../../db/schema";
+import { players, matchPlayers } from "../../db/schema";
 import {
   eq,
   and,
@@ -13,6 +13,7 @@ import {
   or,
   max,
   isNotNull,
+  isNull,
 } from "drizzle-orm";
 import { playerMatchStats } from "../../db/schema";
 
@@ -146,6 +147,39 @@ export const getNextBattingOrderRepo = async (
     );
 
   return result[0]?.maxOrder || 0;
+};
+
+export const getPlayersYetToBatRepo = async (
+  matchId: string,
+  team: "A" | "B",
+) => {
+  const result = await db
+    .select({
+      id: players.id,
+      name: players.name,
+      email: players.email,
+      phone: players.phone,
+    })
+    .from(matchPlayers)
+    .innerJoin(players, eq(players.id, matchPlayers.playerId))
+    .leftJoin(
+      playerMatchStats,
+      and(
+        eq(playerMatchStats.playerId, matchPlayers.playerId),
+        eq(playerMatchStats.matchId, matchId),
+        eq(playerMatchStats.team, team),
+      ),
+    )
+    .where(
+      and(
+        eq(matchPlayers.matchId, matchId),
+        eq(matchPlayers.team, team),
+        isNull(playerMatchStats.battingOrder), // yet to bat
+      ),
+    )
+    .orderBy(asc(players.name));
+
+  return result;
 };
 
 export const upsertPlayerMatchStatsRepo = async (

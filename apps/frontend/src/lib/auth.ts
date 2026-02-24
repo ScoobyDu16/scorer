@@ -1,24 +1,37 @@
-import { api, TurfLoginData, TurfRegisterData, AuthResponse, Player, Match } from './api';
+import {
+  api,
+  TurfLoginData,
+  TurfRegisterData,
+  AuthResponse,
+  Player,
+  Match,
+} from "./api";
 
 export const authAPI = {
   login: async (data: TurfLoginData): Promise<AuthResponse> => {
-    const response = await api.post('/turfs/login', data);
+    const response = await api.post("/turfs/login", data);
     return response.data;
   },
 
   register: async (data: TurfRegisterData): Promise<AuthResponse> => {
-    const response = await api.post('/turfs/register', data);
+    const response = await api.post("/turfs/register", data);
     return response.data;
   },
 
   getMe: async () => {
-    const response = await api.get('/turfs/me');
+    const response = await api.get("/turfs/me");
     return response.data;
   },
 };
 
 export const playerAPI = {
-  getPlayers: async (search?: string, page = 1, limit = 20, sortBy = 'name', sortOrder: 'asc' | 'desc' = 'asc'): Promise<{
+  getPlayers: async (
+    search?: string,
+    page = 1,
+    limit = 20,
+    sortBy = "name",
+    sortOrder: "asc" | "desc" = "asc",
+  ): Promise<{
     players: Player[];
     pagination: {
       page: number;
@@ -30,7 +43,7 @@ export const playerAPI = {
     };
   }> => {
     const params = new URLSearchParams({
-      search: search || '',
+      search: search || "",
       page: page.toString(),
       limit: limit.toString(),
       sortBy,
@@ -40,17 +53,31 @@ export const playerAPI = {
     return response.data;
   },
 
+  getPlayersYetToBat: async (matchId: string, team: "A" | "B") => {
+    const response = await api.get(
+      `/players/yet-to-bat?matchId=${matchId}&team=${team}`,
+    );
+    return response.data;
+  },
+
   getPlayer: async (playerId: string): Promise<Player> => {
     const response = await api.get(`/players/${playerId}`);
     return response.data;
   },
 
-  createPlayer: async (data: { name: string; email?: string; phone?: string }): Promise<Player> => {
-    const response = await api.post('/players', data);
+  createPlayer: async (data: {
+    name: string;
+    email?: string;
+    phone?: string;
+  }): Promise<Player> => {
+    const response = await api.post("/players", data);
     return response.data;
   },
 
-  updatePlayer: async (playerId: string, data: { name: string; email?: string; phone?: string }): Promise<Player> => {
+  updatePlayer: async (
+    playerId: string,
+    data: { name: string; email?: string; phone?: string },
+  ): Promise<Player> => {
     const response = await api.put(`/players/${playerId}`, data);
     return response.data;
   },
@@ -67,19 +94,22 @@ export const playerAPI = {
 
 export const accessCodeAPI = {
   generateAccessCode: async (matchId: string) => {
-    const response = await api.post('/access-codes/generate', { matchId });
+    const response = await api.post("/access-codes/generate", { matchId });
     return response.data;
   },
 
   validateAccessCode: async (matchId: string, code: string) => {
-    const response = await api.post('/access-codes/validate', { matchId, code });
+    const response = await api.post("/access-codes/validate", {
+      matchId,
+      code,
+    });
     return response.data;
   },
 };
 
 export const matchAPI = {
   getMatches: async (): Promise<Match[]> => {
-    const response = await api.get('/matches');
+    const response = await api.get("/matches");
     return response.data;
   },
 
@@ -119,27 +149,33 @@ export const matchAPI = {
     teamBName: string;
     overs: number;
     venue?: string;
-    tossWinner?: 'A' | 'B';
-    tossDecision?: 'BAT' | 'FIELD';
+    tossWinner?: "A" | "B";
+    tossDecision?: "BAT" | "FIELD";
     playersPerTeam?: number;
   }): Promise<Match> => {
-    const response = await api.post('/matches', data);
+    const response = await api.post("/matches", data);
     return response.data;
   },
 
-  addMatchPlayers: async (matchId: string, players: {
-    playerId: string;
-    team: 'A' | 'B';
-  }[]): Promise<void> => {
+  addMatchPlayers: async (
+    matchId: string,
+    players: {
+      playerId: string;
+      team: "A" | "B";
+    }[],
+  ): Promise<void> => {
     const response = await api.post(`/matches/${matchId}/players`, { players });
     return response.data;
   },
 
-  startMatch: async (matchId: string, data: {
-    strikerId: string;
-    nonStrikerId: string;
-    bowlerId: string;
-  }): Promise<any> => {
+  startMatch: async (
+    matchId: string,
+    data: {
+      strikerId: string;
+      nonStrikerId: string;
+      bowlerId: string;
+    },
+  ): Promise<any> => {
     const response = await api.post(`/matches/${matchId}/start`, data);
     return response.data;
   },
@@ -155,7 +191,9 @@ export const matchAPI = {
   },
 
   changeBowler: async (inningsId: string, newBowlerId: string) => {
-    const response = await api.post(`/innings/${inningsId}/change-bowler`, { newBowlerId });
+    const response = await api.post(`/innings/${inningsId}/change-bowler`, {
+      newBowlerId,
+    });
     return response.data;
   },
 };
@@ -165,19 +203,19 @@ export const dashboardAPI = {
     totalPlayers: number;
     totalMatches: number;
   }> => {
-    const response = await api.get('/dashboard');
+    const response = await api.get("/dashboard");
     return response.data;
   },
 };
 
 export const setAuthToken = (token: string) => {
-  localStorage.setItem('token', token);
+  localStorage.setItem("token", token);
 };
 
 export const getAuthToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem("token");
 };
 
 export const removeAuthToken = () => {
-  localStorage.removeItem('token');
+  localStorage.removeItem("token");
 };

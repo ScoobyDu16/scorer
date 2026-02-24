@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { matchAPI } from "../lib/auth";
+import { matchAPI, playerAPI } from "../lib/auth";
 
 type WicketType =
   | "BOWLED"
@@ -78,6 +78,16 @@ export const ScoringPage: React.FC = () => {
     (i: any) => i.inningsNumber === matchScore?.currentInnings,
   );
   const liveData = matchScore?.live;
+
+  // Fetch players yet to bat for new batsman selection
+  const { data: playersYetToBat } = useQuery({
+    queryKey: ["playersYetToBat", matchId, currentInnings?.battingTeam],
+    queryFn: () => {
+      if (!matchId || !currentInnings?.battingTeam) return [];
+      return playerAPI.getPlayersYetToBat(matchId!, currentInnings.battingTeam);
+    },
+    enabled: !!matchId && !!currentInnings?.battingTeam,
+  });
 
   // Calculate current striker, non-striker, bowler from live data
   const getCurrentPlayers = () => {
@@ -223,6 +233,9 @@ export const ScoringPage: React.FC = () => {
     }) => matchAPI.addBall(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
+      queryClient.invalidateQueries({
+        queryKey: ["playersYetToBat", matchId, currentInnings?.battingTeam],
+      });
       // Reset all state after successful ball
       setIsWide(false);
       setIsNoBall(false);
@@ -296,7 +309,7 @@ export const ScoringPage: React.FC = () => {
     // Handle caught & bowled logic
     let finalWicketType = selectedWicketType;
     let finalFielderId: string | null | undefined = wicketData.fielderId;
-    
+
     if (
       selectedWicketType === "CAUGHT" &&
       wicketData.fielderId === currentPlayers.bowler?.id
@@ -804,31 +817,11 @@ export const ScoringPage: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select new batsman...</option>
-                {matchPlayers
-                  ?.filter(
-                    (player: any) =>
-                      player.team === currentInnings?.battingTeam,
-                  )
-                  ?.filter(
-                    (player: any) =>
-                      player.playerId !== liveData?.striker?.id &&
-                      player.playerId !== liveData?.nonStriker?.id,
-                  )
-                  ?.filter((player: any) => {
-                    // Check if player has already batted by looking at recent balls
-                    const hasAlreadyBatted = liveData?.recentBalls?.some(
-                      (ball: any) =>
-                        ball.dismissedPlayerId === player.playerId ||
-                        ball.strikerId === player.playerId ||
-                        ball.nonStrikerId === player.playerId,
-                    );
-                    return !hasAlreadyBatted;
-                  })
-                  ?.map((player: any) => (
-                    <option key={player.playerId} value={player.playerId}>
-                      {player.player?.name || player.playerId}
-                    </option>
-                  ))}
+                {playersYetToBat?.map((player: any) => (
+                  <option key={player.id} value={player.id}>
+                    {player.name}
+                  </option>
+                ))}
               </select>
             </div>
 

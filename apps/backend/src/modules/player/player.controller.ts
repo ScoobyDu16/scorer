@@ -7,6 +7,7 @@ import {
   getPlayersService,
   updatePlayerService,
   deletePlayerService,
+  getPlayersYetToBatService,
 } from "./player.service";
 
 export const createPlayer = async (req: AuthRequest, res: Response) => {
@@ -92,6 +93,27 @@ export const deletePlayer = async (req: AuthRequest, res: Response) => {
 
     await deletePlayerService(playerId);
     res.json({ message: "Player deleted successfully" });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const getPlayersYetToBat = async (req: AuthRequest, res: Response) => {
+  try {
+    const { matchId, team } = req.query;
+    
+    if (!matchId || !team) {
+      return res.status(400).json({ 
+        message: "matchId and team are required" 
+      });
+    }
+
+    const players = await getPlayersYetToBatService(
+      matchId as string, 
+      team as "A" | "B"
+    );
+
+    res.json(players);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

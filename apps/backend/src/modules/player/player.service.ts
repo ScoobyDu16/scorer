@@ -7,6 +7,7 @@ import {
   updatePlayerRepo,
   deletePlayerRepo,
   getPlayerByIdRepo,
+  getPlayersYetToBatRepo,
 } from "./player.repository";
 
 export const createPlayerService = async (turfId: string, data: any) => {
@@ -117,4 +118,8 @@ export const updatePlayerService = async (playerId: string, data: any) => {
 
 export const deletePlayerService = async (playerId: string) => {
   await deletePlayerRepo(playerId);
+};
+
+export const getPlayersYetToBatService = async (matchId: string, team: "A" | "B") => {
+  return await getPlayersYetToBatRepo(matchId, team);
 };
