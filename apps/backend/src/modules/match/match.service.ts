@@ -35,6 +35,10 @@ import { getMatchesWithoutActiveCodesService } from "../access-code/access-code.
 import { calculateNextStrike } from "../../utils/strike.engine";
 import { calculateExtras } from "../../utils/extra.engine";
 import { formatRecentBalls } from "../../utils/ball-display";
+import { 
+  validateWicketScenario, 
+  WicketValidationData 
+} from "../wicket/wicket.validation.service";
 
 export const createMatchService = async (turfId: string, data: any) => {
   const match = await createMatchRepo({
@@ -223,7 +227,17 @@ export const addBallService = async (matchId: string, data: any) => {
   }
 
   /**
-   * 1️⃣ Current batsmen (SOURCE OF TRUTH)
+   * 1️⃣ Wicket validation if this is a wicket ball
+   */
+  if (data.isWicket) {
+    const validation = await validateWicketScenario(matchId, innings.id, data);
+    if (!validation.isValid) {
+      throw new Error(validation.error);
+    }
+  }
+
+  /**
+   * 2️⃣ Current batsmen (SOURCE OF TRUTH)
    */
   const strikerId = innings.currentStrikerId || innings.openingStrikerId;
 
@@ -283,6 +297,7 @@ export const addBallService = async (matchId: string, data: any) => {
     isWicket: data.isWicket || false,
     wicketType: data.wicketType || null,
     dismissedPlayerId: data.dismissedPlayerId || null,
+    fielderId: data.fielderId || null,
     isLegalDelivery,
   });
 
@@ -308,6 +323,11 @@ export const addBallService = async (matchId: string, data: any) => {
       data.runs || 0,
       isLegalDelivery,
     );
+  }
+
+  // 3️⃣️⃣ Handle new batsman stats when wicket falls
+  if (data.isWicket && data.newBatsmanId) {
+    await upsertPlayerMatchStatsRepo(matchId, data.newBatsmanId, innings.battingTeam);
   }
 
   // 3️⃣️⃣ Non-striker stats - ensure non-striker has stats record
@@ -395,6 +415,7 @@ export const addBallService = async (matchId: string, data: any) => {
     wicketType: data.wicketType,
     dismissedPlayerId: data.dismissedPlayerId,
     newBatsmanId: data.newBatsmanId,
+    crossingOccurred: data.crossingOccurred || false,
   });
 
   // Update bowler at end of over

@@ -3,6 +3,22 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { matchAPI } from "../lib/auth";
 
+type WicketType =
+  | "BOWLED"
+  | "CAUGHT"
+  | "CAUGHT_AND_BOWLED"
+  | "RUN_OUT"
+  | "LBW"
+  | "STUMPED"
+  | "HIT_WICKET";
+
+interface WicketData {
+  wicketType: WicketType;
+  dismissedPlayerId: string;
+  newBatsmanId: string;
+  fielderId?: string;
+}
+
 export const ScoringPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
@@ -13,6 +29,17 @@ export const ScoringPage: React.FC = () => {
   const [isByes, setIsByes] = useState(false);
   const [isLegByes, setIsLegByes] = useState(false);
   const [isWicket, setIsWicket] = useState(false);
+
+  // Wicket-related state
+  const [showWicketModal, setShowWicketModal] = useState(false);
+  const [selectedWicketType, setSelectedWicketType] =
+    useState<WicketType>("BOWLED");
+  const [wicketData, setWicketData] = useState<WicketData>({
+    wicketType: "BOWLED",
+    dismissedPlayerId: "",
+    newBatsmanId: "",
+    fielderId: "",
+  });
 
   // Bowler selection modal state
   const [showBowlerSelection, setShowBowlerSelection] = useState(false);
@@ -98,20 +125,23 @@ export const ScoringPage: React.FC = () => {
   };
 
   // Handle extra type changes - only allow one at a time
-  const handleExtraChange = (extraType: 'wide' | 'noBall' | 'byes' | 'legByes', value: boolean) => {
+  const handleExtraChange = (
+    extraType: "wide" | "noBall" | "byes" | "legByes",
+    value: boolean,
+  ) => {
     if (!value) {
       // If unchecking, just update that type
       switch (extraType) {
-        case 'wide':
+        case "wide":
           setIsWide(false);
           break;
-        case 'noBall':
+        case "noBall":
           setIsNoBall(false);
           break;
-        case 'byes':
+        case "byes":
           setIsByes(false);
           break;
-        case 'legByes':
+        case "legByes":
           setIsLegByes(false);
           break;
       }
@@ -121,23 +151,44 @@ export const ScoringPage: React.FC = () => {
       setIsNoBall(false);
       setIsByes(false);
       setIsLegByes(false);
-      
+
       // Then check the selected one
       switch (extraType) {
-        case 'wide':
+        case "wide":
           setIsWide(true);
           break;
-        case 'noBall':
+        case "noBall":
           setIsNoBall(true);
           break;
-        case 'byes':
+        case "byes":
           setIsByes(true);
           break;
-        case 'legByes':
+        case "legByes":
           setIsLegByes(true);
           break;
       }
     }
+  };
+
+  // Handle wicket checkbox change
+  const handleWicketChange = (value: boolean) => {
+    setIsWicket(value);
+    if (!value) {
+      // Reset wicket data when unchecking
+      setWicketData({
+        wicketType: "BOWLED",
+        dismissedPlayerId: "",
+        newBatsmanId: "",
+        fielderId: "",
+      });
+      setSelectedWicketType("BOWLED");
+    }
+  };
+
+  // Handle wicket type selection
+  const handleWicketTypeChange = (wicketType: WicketType) => {
+    setSelectedWicketType(wicketType);
+    setWicketData((prev) => ({ ...prev, wicketType }));
   };
   const handleBowlerChange = () => {
     if (!selectedNewBowler || !currentInnings) {
@@ -164,15 +215,27 @@ export const ScoringPage: React.FC = () => {
       isByes: boolean;
       isLegByes: boolean;
       isWicket: boolean;
+      wicketType?: WicketType;
+      dismissedPlayerId?: string;
+      newBatsmanId?: string;
+      fielderId?: string;
+      crossingOccurred?: boolean;
     }) => matchAPI.addBall(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
-      // Reset extras only, keep selectedRuns for next ball
+      // Reset all state after successful ball
       setIsWide(false);
       setIsNoBall(false);
       setIsByes(false);
       setIsLegByes(false);
       setIsWicket(false);
+      setShowWicketModal(false);
+      setWicketData({
+        wicketType: "BOWLED",
+        dismissedPlayerId: "",
+        newBatsmanId: "",
+        fielderId: "",
+      });
     },
     onError: (error: any) => {
       alert(`Error adding ball: ${error.message}`);
@@ -182,18 +245,90 @@ export const ScoringPage: React.FC = () => {
   const handleScoreBall = (runs?: number) => {
     if (!currentInnings || !currentPlayers.striker) return;
 
+    // If wicket is checked, show wicket modal instead of scoring runs
+    if (isWicket) {
+      setShowWicketModal(true);
+      return;
+    }
+
     addBallMutation.mutate({
       matchId: matchId!,
       inningsId: currentInnings.id,
       strikerId: currentPlayers.striker.id,
-      bowlerId: currentPlayers.bowler?.id || "", // Need to handle first ball case
-      runs: runs !== undefined ? runs : 0, // Use parameter or default
+      bowlerId: currentPlayers.bowler?.id || "",
+      runs: runs !== undefined ? runs : 0,
       isWide,
       isNoBall,
       isByes,
       isLegByes,
       isWicket,
     });
+  };
+
+  // Handle wicket submission
+  const handleWicketSubmit = (runs?: number) => {
+    if (!currentInnings || !currentPlayers.striker) return;
+
+    // Validate wicket data
+    if (!wicketData.dismissedPlayerId) {
+      alert("Please select a dismissed player");
+      return;
+    }
+    if (!wicketData.newBatsmanId) {
+      alert("Please select a new batsman");
+      return;
+    }
+
+    // Check if fielder is required
+    if (
+      selectedWicketType === "CAUGHT" ||
+      selectedWicketType === "STUMPED" ||
+      selectedWicketType === "RUN_OUT"
+    ) {
+      if (!wicketData.fielderId) {
+        alert(
+          `Fielder is required for ${selectedWicketType.replace("_", " ")}`,
+        );
+        return;
+      }
+    }
+
+    // Handle caught & bowled logic
+    let finalWicketType = selectedWicketType;
+    let finalFielderId: string | null | undefined = wicketData.fielderId;
+    
+    if (
+      selectedWicketType === "CAUGHT" &&
+      wicketData.fielderId === currentPlayers.bowler?.id
+    ) {
+      finalWicketType = "CAUGHT_AND_BOWLED";
+      finalFielderId = undefined; // Don't send fielderId for caught & bowled
+    }
+
+    // Build payload - omit fielderId if undefined
+    const payload: any = {
+      matchId: matchId!,
+      inningsId: currentInnings.id,
+      strikerId: currentPlayers.striker.id,
+      bowlerId: currentPlayers.bowler?.id || "",
+      runs: runs !== undefined ? runs : 0,
+      isWide,
+      isNoBall,
+      isByes,
+      isLegByes,
+      isWicket: true,
+      wicketType: finalWicketType,
+      dismissedPlayerId: wicketData.dismissedPlayerId,
+      newBatsmanId: wicketData.newBatsmanId,
+      crossingOccurred: false,
+    };
+
+    // Only include fielderId if it's defined (not undefined)
+    if (finalFielderId !== undefined) {
+      payload.fielderId = finalFielderId;
+    }
+
+    addBallMutation.mutate(payload);
   };
 
   const formatOvers = (overs: number) => {
@@ -457,18 +592,20 @@ export const ScoringPage: React.FC = () => {
                     Recent Balls
                   </h2>
                   <div className="flex space-x-2 overflow-x-auto">
-                    {liveData?.recentBalls?.map((ball: string, index: number) => (
-                      <div
-                        key={index}
-                        className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center text-sm font-medium ${
-                          ball === "|" 
-                            ? "bg-blue-500 text-white" 
-                            : "bg-gray-100"
-                        }`}
-                      >
-                        {ball}
-                      </div>
-                    ))}
+                    {liveData?.recentBalls?.map(
+                      (ball: string, index: number) => (
+                        <div
+                          key={index}
+                          className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center text-sm font-medium ${
+                            ball === "|"
+                              ? "bg-blue-500 text-white"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          {ball}
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
               </div>
@@ -514,7 +651,9 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isWide}
-                          onChange={(e) => handleExtraChange('wide', e.target.checked)}
+                          onChange={(e) =>
+                            handleExtraChange("wide", e.target.checked)
+                          }
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Wide</span>
@@ -523,7 +662,9 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isNoBall}
-                          onChange={(e) => handleExtraChange('noBall', e.target.checked)}
+                          onChange={(e) =>
+                            handleExtraChange("noBall", e.target.checked)
+                          }
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">No Ball</span>
@@ -532,7 +673,9 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isByes}
-                          onChange={(e) => handleExtraChange('byes', e.target.checked)}
+                          onChange={(e) =>
+                            handleExtraChange("byes", e.target.checked)
+                          }
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Byes</span>
@@ -541,7 +684,9 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isLegByes}
-                          onChange={(e) => handleExtraChange('legByes', e.target.checked)}
+                          onChange={(e) =>
+                            handleExtraChange("legByes", e.target.checked)
+                          }
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Leg Byes</span>
@@ -550,7 +695,7 @@ export const ScoringPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isWicket}
-                          onChange={(e) => setIsWicket(e.target.checked)}
+                          onChange={(e) => handleWicketChange(e.target.checked)}
                           className="mr-2"
                         />
                         <span className="text-sm text-gray-700">Wicket</span>
@@ -585,6 +730,174 @@ export const ScoringPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Wicket Selection Modal */}
+      {showWicketModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Record Wicket
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Select wicket type and players
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Wicket Type
+              </label>
+              <select
+                value={selectedWicketType}
+                onChange={(e) =>
+                  handleWicketTypeChange(e.target.value as WicketType)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="BOWLED">Bowled</option>
+                <option value="CAUGHT">Caught</option>
+                <option value="RUN_OUT">Run Out</option>
+                <option value="LBW">LBW</option>
+                <option value="STUMPED">Stumped</option>
+                <option value="HIT_WICKET">Hit Wicket</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dismissed Player
+              </label>
+              <select
+                value={wicketData.dismissedPlayerId}
+                onChange={(e) =>
+                  setWicketData((prev) => ({
+                    ...prev,
+                    dismissedPlayerId: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select dismissed player...</option>
+                {liveData?.striker && (
+                  <option value={liveData.striker.id}>
+                    {liveData.striker.name} (Striker)
+                  </option>
+                )}
+                {liveData?.nonStriker && (
+                  <option value={liveData.nonStriker.id}>
+                    {liveData.nonStriker.name} (Non-Striker)
+                  </option>
+                )}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Batsman
+              </label>
+              <select
+                value={wicketData.newBatsmanId}
+                onChange={(e) =>
+                  setWicketData((prev) => ({
+                    ...prev,
+                    newBatsmanId: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select new batsman...</option>
+                {matchPlayers
+                  ?.filter(
+                    (player: any) =>
+                      player.team === currentInnings?.battingTeam,
+                  )
+                  ?.filter(
+                    (player: any) =>
+                      player.playerId !== liveData?.striker?.id &&
+                      player.playerId !== liveData?.nonStriker?.id,
+                  )
+                  ?.filter((player: any) => {
+                    // Check if player has already batted by looking at recent balls
+                    const hasAlreadyBatted = liveData?.recentBalls?.some(
+                      (ball: any) =>
+                        ball.dismissedPlayerId === player.playerId ||
+                        ball.strikerId === player.playerId ||
+                        ball.nonStrikerId === player.playerId,
+                    );
+                    return !hasAlreadyBatted;
+                  })
+                  ?.map((player: any) => (
+                    <option key={player.playerId} value={player.playerId}>
+                      {player.player?.name || player.playerId}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {(selectedWicketType === "CAUGHT" ||
+              selectedWicketType === "STUMPED" ||
+              selectedWicketType === "RUN_OUT") && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fielder{" "}
+                  {selectedWicketType === "STUMPED" ? "(Wicketkeeper)" : ""}
+                </label>
+                <select
+                  value={wicketData.fielderId || ""}
+                  onChange={(e) =>
+                    setWicketData((prev) => ({
+                      ...prev,
+                      fielderId: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required={
+                    selectedWicketType === "CAUGHT" ||
+                    selectedWicketType === "STUMPED"
+                  }
+                >
+                  <option value="">
+                    {selectedWicketType === "STUMPED"
+                      ? "Select wicketkeeper..."
+                      : "Select fielder..."}
+                  </option>
+                  {matchPlayers
+                    ?.filter(
+                      (player: any) =>
+                        player.team !== currentInnings?.battingTeam,
+                    )
+                    ?.map((player: any) => (
+                      <option key={player.playerId} value={player.playerId}>
+                        {player.player?.name || player.playerId}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowWicketModal(false)}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleWicketSubmit()}
+                disabled={
+                  !wicketData.dismissedPlayerId ||
+                  !wicketData.newBatsmanId ||
+                  (selectedWicketType === "CAUGHT" && !wicketData.fielderId) ||
+                  (selectedWicketType === "STUMPED" && !wicketData.fielderId) ||
+                  (selectedWicketType === "RUN_OUT" && !wicketData.fielderId)
+                }
+                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              >
+                Record Wicket
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bowler Selection Modal */}
       {showBowlerSelection && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -593,9 +906,10 @@ export const ScoringPage: React.FC = () => {
               Select Next Bowler
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              Choose a bowler from the bowling team. Same bowler cannot bowl consecutive overs (ICC rule).
+              Choose a bowler from the bowling team. Same bowler cannot bowl
+              consecutive overs (ICC rule).
             </p>
-            
+
             <div className="mb-4">
               <select
                 value={selectedNewBowler}
@@ -603,11 +917,13 @@ export const ScoringPage: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select bowler...</option>
-                {getAvailableBowlers().map((bowler: { id: string; name: string }) => (
-                  <option key={bowler.id} value={bowler.id}>
-                    {bowler.name}
-                  </option>
-                ))}
+                {getAvailableBowlers().map(
+                  (bowler: { id: string; name: string }) => (
+                    <option key={bowler.id} value={bowler.id}>
+                      {bowler.name}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
 
@@ -623,7 +939,9 @@ export const ScoringPage: React.FC = () => {
                 disabled={!selectedNewBowler || changeBowlerMutation.isPending}
                 className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
               >
-                {changeBowlerMutation.isPending ? "Changing..." : "Change Bowler"}
+                {changeBowlerMutation.isPending
+                  ? "Changing..."
+                  : "Change Bowler"}
               </button>
             </div>
           </div>

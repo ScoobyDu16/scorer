@@ -27,11 +27,11 @@ export const extraTypeEnum = pgEnum("extra_type", [
 export const wicketTypeEnum = pgEnum("wicket_type", [
   "BOWLED",
   "CAUGHT",
+  "CAUGHT_AND_BOWLED",
   "RUN_OUT",
   "LBW",
   "STUMPED",
   "HIT_WICKET",
-  "RETIRED",
 ]);
 
 export const balls = pgTable(
@@ -75,6 +75,7 @@ export const balls = pgTable(
     isWicket: boolean("is_wicket").default(false).notNull(),
     wicketType: wicketTypeEnum("wicket_type"),
     dismissedPlayerId: uuid("dismissed_player_id").references(() => players.id),
+    fielderId: uuid("fielder_id").references(() => players.id),
 
     /**
      * Legal delivery?

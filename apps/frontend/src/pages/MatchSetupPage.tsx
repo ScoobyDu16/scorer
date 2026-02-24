@@ -52,15 +52,40 @@ export const MatchSetupPage: React.FC = () => {
     }
   }, []);
 
-  // Fetch all players
-  const { data: playersData, isLoading } = useQuery({
-    queryKey: ["players"],
-    queryFn: () => playerAPI.getPlayers(),
+  // Fetch players with infinite scroll
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const { data: playersData, isLoading, isFetching } = useQuery({
+    queryKey: ["players", searchTerm, currentPage],
+    queryFn: () => playerAPI.getPlayers(searchTerm, currentPage, 20, "name", "asc"),
+    enabled: true,
   });
 
-  const allPlayers = playersData?.players || [];
+  // Append new players to existing list when page changes
+  useEffect(() => {
+    if (playersData) {
+      if (currentPage === 1) {
+        // First page - replace all players
+        setAllPlayers(playersData.players);
+      } else {
+        // Subsequent pages - append players
+        setAllPlayers(prev => [...prev, ...playersData.players]);
+      }
+      setHasMore(playersData.pagination.hasNext);
+      setIsLoadingMore(false);
+    }
+  }, [playersData, currentPage]);
 
-  // Filter and sort players
+  // Reset pagination when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setAllPlayers([]);
+    setHasMore(true);
+  }, [searchTerm]);
+
   const availablePlayers = allPlayers
     .filter(
       (player) =>
@@ -69,6 +94,34 @@ export const MatchSetupPage: React.FC = () => {
         !teamBPlayers.some((p) => p.id === player.id),
     )
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Infinite scroll handler
+  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null);
+  const [previousScrollHeight, setPreviousScrollHeight] = useState(0);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    setScrollContainer(element);
+    
+    if (
+      element.scrollHeight - element.scrollTop <= element.clientHeight + 50 &&
+      hasMore &&
+      !isLoading &&
+      !isFetching
+    ) {
+      setPreviousScrollHeight(element.scrollHeight);
+      setIsLoadingMore(true);
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  // Preserve scroll position when new players are added
+  useEffect(() => {
+    if (scrollContainer && playersData && currentPage > 1) {
+      const newScrollTop = scrollContainer.scrollTop + (scrollContainer.scrollHeight - previousScrollHeight);
+      scrollContainer.scrollTop = newScrollTop;
+    }
+  }, [allPlayers, currentPage, scrollContainer, previousScrollHeight]);
 
   // Add players to match mutation
   const addPlayersMutation = useMutation({
@@ -247,7 +300,10 @@ export const MatchSetupPage: React.FC = () => {
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Available Players
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto">
+                <div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto"
+                  onScroll={handleScroll}
+                >
                   {availablePlayers.map((player) => (
                     <div
                       key={player.id}
@@ -276,9 +332,20 @@ export const MatchSetupPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                {availablePlayers.length === 0 && (
+                {availablePlayers.length === 0 && !isLoading && (
                   <div className="text-center text-gray-500 py-8">
                     No available players found
+                  </div>
+                )}
+                {isLoadingMore && (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500 mx-auto"></div>
+                    <p className="text-sm text-gray-500 mt-2">Loading more players...</p>
+                  </div>
+                )}
+                {!hasMore && availablePlayers.length > 0 && (
+                  <div className="text-center text-gray-500 py-4">
+                    No more players to load
                   </div>
                 )}
               </div>
