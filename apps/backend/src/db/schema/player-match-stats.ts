@@ -26,6 +26,11 @@ export const playerMatchStats = pgTable(
     team: teamEnum("team").notNull(),
 
     /**
+     * Batting order (null for players who didn't bat)
+     */
+    battingOrder: integer("batting_order"),
+
+    /**
      * Batting stats
      */
     runs: integer("runs").default(0).notNull(),

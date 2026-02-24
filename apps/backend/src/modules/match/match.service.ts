@@ -10,6 +10,7 @@ import {
   updateBowlingStatsRepo,
   updateMaidensRepo,
   upsertPlayerMatchStatsRepo,
+  getNextBattingOrderRepo,
 } from "../player/player.repository";
 import {
   addMatchPlayersRepo,
@@ -35,9 +36,9 @@ import { getMatchesWithoutActiveCodesService } from "../access-code/access-code.
 import { calculateNextStrike } from "../../utils/strike.engine";
 import { calculateExtras } from "../../utils/extra.engine";
 import { formatRecentBalls } from "../../utils/ball-display";
-import { 
-  validateWicketScenario, 
-  WicketValidationData 
+import {
+  validateWicketScenario,
+  WicketValidationData,
 } from "../wicket/wicket.validation.service";
 
 export const createMatchService = async (turfId: string, data: any) => {
@@ -149,11 +150,13 @@ export const startInningsService = async (
       matchId,
       openingPlayers.strikerId,
       battingTeam,
+      1, // Opening striker gets batting order 1
     );
     await upsertPlayerMatchStatsRepo(
       matchId,
       openingPlayers.nonStrikerId,
       battingTeam,
+      2, // Opening non-striker gets batting order 2
     );
 
     // Create stats for opening bowler (bowling team)
@@ -162,6 +165,7 @@ export const startInningsService = async (
       matchId,
       openingPlayers.bowlerId,
       bowlingTeam,
+      undefined, // Bowlers don't have batting order
     );
   }
 
@@ -195,7 +199,12 @@ export const changeBowlerService = async (
 
   // Create player stats for new bowler if not exists
   const bowlingTeam = innings.battingTeam === "A" ? "B" : "A";
-  await upsertPlayerMatchStatsRepo(innings.matchId, newBowlerId, bowlingTeam);
+  await upsertPlayerMatchStatsRepo(
+    innings.matchId,
+    newBowlerId,
+    bowlingTeam,
+    undefined, // Bowlers don't have batting order
+  );
 
   // Update current bowler in innings
   await updateInningsCurrentPlayersRepo(
@@ -327,7 +336,18 @@ export const addBallService = async (matchId: string, data: any) => {
 
   // 3️⃣️⃣ Handle new batsman stats when wicket falls
   if (data.isWicket && data.newBatsmanId) {
-    await upsertPlayerMatchStatsRepo(matchId, data.newBatsmanId, innings.battingTeam);
+    // Get next batting order for this innings
+    const nextBattingOrder = await getNextBattingOrderRepo(
+      matchId,
+      innings.battingTeam,
+    );
+
+    await upsertPlayerMatchStatsRepo(
+      matchId,
+      data.newBatsmanId,
+      innings.battingTeam,
+      (nextBattingOrder ?? 0) + 1,
+    );
   }
 
   // 3️⃣️⃣ Non-striker stats - ensure non-striker has stats record
@@ -342,18 +362,20 @@ export const addBallService = async (matchId: string, data: any) => {
     ) {
       const battingTeam = innings.battingTeam;
 
-      // Create stats for opening striker
+      // Create stats for opening striker (batting order 1)
       await upsertPlayerMatchStatsRepo(
         matchId,
         inningsDetails.openingStrikerId,
         battingTeam,
+        1, // Opening striker gets batting order 1
       );
 
-      // Create stats for opening non-striker
+      // Create stats for opening non-striker (batting order 2)
       await upsertPlayerMatchStatsRepo(
         matchId,
         inningsDetails.openingNonStrikerId,
         battingTeam,
+        2, // Opening non-striker gets batting order 2
       );
     }
   } else {
@@ -856,7 +878,9 @@ const buildLiveScoreDetails = async (inningsId: string) => {
      * 3️⃣ Over completion logic
      * Check if the most recent over has 6 legal deliveries
      */
-    const latestOverNumber = Math.max(...normalizedBalls.map(b => b.overNumber));
+    const latestOverNumber = Math.max(
+      ...normalizedBalls.map((b) => b.overNumber),
+    );
 
     const legalBallsInLatestOver = normalizedBalls.filter(
       (b) => b.overNumber === latestOverNumber && b.isLegalDelivery,

@@ -11,6 +11,8 @@ import {
   desc,
   asc,
   or,
+  max,
+  isNotNull,
 } from "drizzle-orm";
 import { playerMatchStats } from "../../db/schema";
 
@@ -128,10 +130,29 @@ export const getPlayerCareerStatsRepo = async (playerId: string) => {
   return result[0];
 };
 
+export const getNextBattingOrderRepo = async (
+  matchId: string,
+  team: "A" | "B",
+) => {
+  const result = await db
+    .select({ maxOrder: max(playerMatchStats.battingOrder) })
+    .from(playerMatchStats)
+    .where(
+      and(
+        eq(playerMatchStats.matchId, matchId),
+        eq(playerMatchStats.team, team),
+        isNotNull(playerMatchStats.battingOrder),
+      ),
+    );
+
+  return result[0]?.maxOrder || 0;
+};
+
 export const upsertPlayerMatchStatsRepo = async (
   matchId: string,
   playerId: string,
   team: "A" | "B",
+  battingOrder?: number,
 ) => {
   const [record] = await db
     .select()
@@ -150,10 +171,22 @@ export const upsertPlayerMatchStatsRepo = async (
         matchId,
         playerId,
         team,
+        battingOrder,
       })
       .returning();
 
     return created;
+  }
+
+  // If battingOrder is provided, update it
+  if (battingOrder !== undefined) {
+    const [updated] = await db
+      .update(playerMatchStats)
+      .set({ battingOrder })
+      .where(eq(playerMatchStats.id, record.id))
+      .returning();
+
+    return updated;
   }
 
   return record;
@@ -215,10 +248,7 @@ export const updateBowlingStatsRepo = async (
 /**
  * Update maidens for bowler (call at end of each over)
  */
-export const updateMaidensRepo = async (
-  matchId: string,
-  playerId: string,
-) => {
+export const updateMaidensRepo = async (matchId: string, playerId: string) => {
   // Get current bowler stats
   const [currentStats] = await db
     .select()
@@ -234,7 +264,7 @@ export const updateMaidensRepo = async (
 
   // Calculate runs conceded in current over (last 6 legal balls)
   const ballsInCurrentOver = currentStats.ballsBowled % 6;
-  
+
   // If just completed an over (6 balls) and runs in this over were 0, increment maidens
   if (ballsInCurrentOver === 0) {
     // Get runs in the last over by checking recent balls
@@ -254,8 +284,11 @@ export const updateMaidensRepo = async (
       .orderBy(sql`created_at DESC`)
       .limit(6);
 
-    const runsInOver = recentBalls.reduce((sum: number, ball: any) => sum + (ball.runs || 0), 0);
-    
+    const runsInOver = recentBalls.reduce(
+      (sum: number, ball: any) => sum + (ball.runs || 0),
+      0,
+    );
+
     if (runsInOver === 0) {
       await db.execute(sql`
         UPDATE player_match_stats
