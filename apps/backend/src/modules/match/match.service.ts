@@ -29,6 +29,7 @@ import {
   getMatchesByTurfRepo,
   revertInningsTotalsRepo,
   updateInningsCurrentPlayersRepo,
+  updateInningsExtrasRepo,
   updateInningsOpeningPlayersRepo,
   updateInningsStatusRepo,
   updateInningsTotalsRepo,
@@ -423,6 +424,15 @@ export const addBallService = async (matchId: string, data: any) => {
     isLegalDelivery,
   );
 
+  /**
+   * 5️⃣1️⃣ Update innings extras (O(1) performance for scoreboard)
+   */
+  await updateInningsExtrasRepo(
+    innings.id,
+    extraType,
+    extraRuns,
+  );
+
   // 3️⃣ Batting stats
   const batsmanId = data.strikerId || data.batsmanId; // Handle both parameter names
   if (batsmanId) {
@@ -666,15 +676,31 @@ export const getMatchScoreService = async (matchId: string) => {
 
   matchServiceLogger.found("match", match, { matchId });
 
-  const innings = match.innings.map((i) => ({
-    id: i.id,
-    inningsNumber: i.inningsNumber,
-    battingTeam: i.battingTeam,
-    totalRuns: i.totalRuns,
-    totalWickets: i.totalWickets,
-    totalOvers: ballsToOvers(i.totalBalls),
-    status: i.status,
-  }));
+  const innings = match.innings.map((i) => {
+    // Compute extras breakdown from individual fields
+    const wideRuns = i.wideRuns || 0;
+    const noBallRuns = i.noBallRuns || 0;
+    const byeRuns = i.byeRuns || 0;
+    const legByeRuns = i.legByeRuns || 0;
+    const totalExtras = wideRuns + noBallRuns + byeRuns + legByeRuns;
+
+    return {
+      id: i.id,
+      inningsNumber: i.inningsNumber,
+      battingTeam: i.battingTeam,
+      totalRuns: i.totalRuns,
+      totalWickets: i.totalWickets,
+      totalOvers: ballsToOvers(i.totalBalls),
+      status: i.status,
+      extras: {
+        wide: wideRuns,
+        noBall: noBallRuns,
+        bye: byeRuns,
+        legBye: legByeRuns,
+        total: totalExtras,
+      },
+    };
+  });
 
   /**
    * Run Rate / Target Logic (your existing)

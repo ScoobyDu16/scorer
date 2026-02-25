@@ -230,3 +230,65 @@ export const updateInningsOpeningPlayersRepo = async (
     })
     .where(eq(innings.id, inningsId));
 };
+
+export const updateInningsExtrasRepo = async (
+  inningsId: string,
+  extraType: string | null,
+  extraRuns: number,
+) => {
+  // Do nothing if there is no extra
+  if (!extraType || extraRuns === 0) return;
+
+  const updateData: any = { updatedAt: new Date() };
+
+  switch (extraType) {
+    case "WIDE":
+      updateData.wideRuns = sql`wide_runs + ${extraRuns}`;
+      break;
+    case "NO_BALL":
+      updateData.noBallRuns = sql`no_ball_runs + ${extraRuns}`;
+      break;
+    case "BYE":
+      updateData.byeRuns = sql`bye_runs + ${extraRuns}`;
+      break;
+    case "LEG_BYE":
+      updateData.legByeRuns = sql`leg_bye_runs + ${extraRuns}`;
+      break;
+  }
+
+  await db
+    .update(innings)
+    .set(updateData)
+    .where(eq(innings.id, inningsId));
+};
+
+export const revertInningsExtrasRepo = async (
+  inningsId: string,
+  extraType: string | null,
+  extraRuns: number,
+) => {
+  // Do nothing if there is no extra
+  if (!extraType || extraRuns === 0) return;
+
+  const updateData: any = { updatedAt: new Date() };
+
+  switch (extraType) {
+    case "WIDE":
+      updateData.wideRuns = sql`GREATEST(0, wide_runs - ${extraRuns})`;
+      break;
+    case "NO_BALL":
+      updateData.noBallRuns = sql`GREATEST(0, no_ball_runs - ${extraRuns})`;
+      break;
+    case "BYE":
+      updateData.byeRuns = sql`GREATEST(0, bye_runs - ${extraRuns})`;
+      break;
+    case "LEG_BYE":
+      updateData.legByeRuns = sql`GREATEST(0, leg_bye_runs - ${extraRuns})`;
+      break;
+  }
+
+  await db
+    .update(innings)
+    .set(updateData)
+    .where(eq(innings.id, inningsId));
+};

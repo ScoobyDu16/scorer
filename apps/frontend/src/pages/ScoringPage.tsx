@@ -79,14 +79,14 @@ export const ScoringPage: React.FC = () => {
   );
   const liveData = matchScore?.live;
 
-  // Fetch players yet to bat for new batsman selection
+  // Fetch players yet to bat for new batsman selection (only when wicket modal is open)
   const { data: playersYetToBat } = useQuery({
     queryKey: ["playersYetToBat", matchId, currentInnings?.battingTeam],
     queryFn: () => {
       if (!matchId || !currentInnings?.battingTeam) return [];
       return playerAPI.getPlayersYetToBat(matchId!, currentInnings.battingTeam);
     },
-    enabled: !!matchId && !!currentInnings?.battingTeam,
+    enabled: !!matchId && !!currentInnings?.battingTeam && showWicketModal,
   });
 
   // Calculate current striker, non-striker, bowler from live data
@@ -209,6 +209,30 @@ export const ScoringPage: React.FC = () => {
                         ({firstInnings.totalOvers} overs)
                       </span>
                     </div>
+                    {/* Extras Display */}
+                    {firstInnings.extras && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        Extras: {firstInnings.extras.total}
+                        {firstInnings.extras.total > 0 && (
+                          <span>
+                            {" ("}
+                            {firstInnings.extras.wide > 0 && (
+                              <span>WD: {firstInnings.extras.wide}</span>
+                            )}
+                            {firstInnings.extras.noBall > 0 && (
+                              <span>, NB: {firstInnings.extras.noBall}</span>
+                            )}
+                            {firstInnings.extras.bye > 0 && (
+                              <span>, B: {firstInnings.extras.bye}</span>
+                            )}
+                            {firstInnings.extras.legBye > 0 && (
+                              <span>, LB: {firstInnings.extras.legBye}</span>
+                            )}
+                            {")"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -223,6 +247,30 @@ export const ScoringPage: React.FC = () => {
                         ({secondInnings.totalOvers} overs)
                       </span>
                     </div>
+                    {/* Extras Display */}
+                    {secondInnings.extras && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        Extras: {secondInnings.extras.total}
+                        {secondInnings.extras.total > 0 && (
+                          <span>
+                            {" ("}
+                            {secondInnings.extras.wide > 0 && (
+                              <span>WD: {secondInnings.extras.wide}</span>
+                            )}
+                            {secondInnings.extras.noBall > 0 && (
+                              <span>, NB: {secondInnings.extras.noBall}</span>
+                            )}
+                            {secondInnings.extras.bye > 0 && (
+                              <span>, B: {secondInnings.extras.bye}</span>
+                            )}
+                            {secondInnings.extras.legBye > 0 && (
+                              <span>, LB: {secondInnings.extras.legBye}</span>
+                            )}
+                            {")"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -434,7 +482,10 @@ export const ScoringPage: React.FC = () => {
                   >
                     <option value="">Select bowler...</option>
                     {matchPlayers
-                      ?.filter((p: any) => p.team === (secondBattingTeam === "A" ? "B" : "A"))
+                      ?.filter(
+                        (p: any) =>
+                          p.team === (secondBattingTeam === "A" ? "B" : "A"),
+                      )
                       ?.map((player: any) => (
                         <option key={player.playerId} value={player.playerId}>
                           {player.player?.name}
@@ -930,6 +981,30 @@ export const ScoringPage: React.FC = () => {
                     </span>
                   )}
                 </div>
+                {/* Extras Display */}
+                {currentInnings?.extras && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    Extras: {currentInnings.extras.total}
+                    {currentInnings.extras.total > 0 && (
+                      <span>
+                        {" ("}
+                        {currentInnings.extras.wide > 0 && (
+                          <span>WD: {currentInnings.extras.wide}</span>
+                        )}
+                        {currentInnings.extras.noBall > 0 && (
+                          <span>, NB: {currentInnings.extras.noBall}</span>
+                        )}
+                        {currentInnings.extras.bye > 0 && (
+                          <span>, B: {currentInnings.extras.bye}</span>
+                        )}
+                        {currentInnings.extras.legBye > 0 && (
+                          <span>, LB: {currentInnings.extras.legBye}</span>
+                        )}
+                        {")"}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -55,6 +55,12 @@ export const innings = pgTable(
 
     totalBalls: integer("total_balls").default(0).notNull(),
 
+    // Extras breakdown - O(1) performance for scoreboard
+    wideRuns: integer("wide_runs").default(0).notNull(),
+    noBallRuns: integer("no_ball_runs").default(0).notNull(),
+    byeRuns: integer("bye_runs").default(0).notNull(),
+    legByeRuns: integer("leg_bye_runs").default(0).notNull(),
+
     status: inningsStatusEnum("status")
       .default(inningsStatusEnum.enumValues[0])
       .notNull(),
