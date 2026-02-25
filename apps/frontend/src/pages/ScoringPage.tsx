@@ -963,6 +963,12 @@ export const ScoringPage: React.FC = () => {
                 <h1 className="text-2xl font-bold text-gray-900">
                   {matchScore.teamAName} vs {matchScore.teamBName}
                 </h1>
+                {/* Toss Decision Display - Only during first innings */}
+                {matchScore.currentInnings === 1 && matchScore.tossWinner && matchScore.tossDecision && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    {matchScore.tossWinner === "A" ? matchScore.teamAName : matchScore.teamBName} opted to {matchScore.tossDecision.toLowerCase()}
+                  </div>
+                )}
                 <div className="mt-4 text-lg">
                   <span className="font-medium">{battingTeam}</span>
                   <span className="mx-2">
@@ -1443,7 +1449,10 @@ export const ScoringPage: React.FC = () => {
 
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setShowWicketModal(false)}
+                onClick={() => {
+                  setShowWicketModal(false);
+                  setIsWicket(false);
+                }}
                 className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 Cancel

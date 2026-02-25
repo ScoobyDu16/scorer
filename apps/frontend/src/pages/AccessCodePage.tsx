@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { accessCodeAPI } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
@@ -11,15 +11,26 @@ export const AccessCodePage: React.FC = () => {
     code: '',
   });
 
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [validatedMatch, setValidatedMatch] = useState<any>(null);
+  // Load matchId from localStorage on component mount
+  useEffect(() => {
+    const storedMatch = localStorage.getItem('currentMatch');
+    if (storedMatch) {
+      const matchData = JSON.parse(storedMatch);
+      setFormData(prev => ({
+        ...prev,
+        matchId: matchData.matchId || ''
+      }));
+    }
+  }, []);
 
   const validateCodeMutation = useMutation({
     mutationFn: ({ matchId, code }: { matchId: string; code: string }) => 
       accessCodeAPI.validateAccessCode(matchId, code),
     onSuccess: (data) => {
-      setValidatedMatch(data);
-      setShowSuccessModal(true);
+      // Store match info in localStorage for later use
+      localStorage.setItem('currentMatch', JSON.stringify(data));
+      // Redirect directly to match setup
+      navigate(`/match-setup/${formData.matchId}`);
     },
     onError: (error: any) => {
       alert(`Invalid or expired code: ${error.message}`);
@@ -39,12 +50,6 @@ export const AccessCodePage: React.FC = () => {
     }));
   };
 
-  const proceedToMatch = () => {
-    // Store match info in localStorage for later use
-    localStorage.setItem('currentMatch', JSON.stringify(validatedMatch));
-    navigate(`/match-setup/${formData.matchId}`);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-md mx-auto py-6 sm:px-6 lg:px-8">
@@ -53,26 +58,18 @@ export const AccessCodePage: React.FC = () => {
             <div className="px-4 py-5 sm:p-6">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Enter Access Code</h1>
               <p className="text-sm text-gray-600 mb-6">
-                Enter the match ID and access code to continue with the match setup.
+                Enter the access code to continue with the match setup.
               </p>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="matchId" className="block text-sm font-medium text-gray-700 mb-2">
-                    Match ID *
-                  </label>
-                  <input
-                    type="text"
-                    id="matchId"
-                    name="matchId"
-                    value={formData.matchId}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Enter match ID"
-                  />
+              {/* Display match ID (read-only) */}
+              {formData.matchId && (
+                <div className="mb-6 p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-600">Match ID:</p>
+                  <p className="text-sm font-mono font-semibold text-gray-900">{formData.matchId}</p>
                 </div>
-
+              )}
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
                     Access Code *
@@ -104,40 +101,6 @@ export const AccessCodePage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Success Modal */}
-      {showSuccessModal && validatedMatch && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0" />
-                </svg>
-              </div>
-              <h3 className="mt-2 text-lg font-medium text-gray-900">Access Code Valid!</h3>
-              <div className="mt-2">
-                <p className="text-sm text-gray-500">
-                  You can now proceed with the match setup.
-                </p>
-                <div className="mt-4 p-3 bg-gray-100 rounded-md">
-                  <p className="text-sm font-semibold text-gray-900">
-                    Match: {validatedMatch.matchId}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={proceedToMatch}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
-                Continue to Match Setup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

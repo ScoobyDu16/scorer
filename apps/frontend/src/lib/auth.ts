@@ -150,7 +150,7 @@ export const matchAPI = {
     overs: number;
     venue?: string;
     tossWinner?: "A" | "B";
-    tossDecision?: "BAT" | "FIELD";
+    tossDecision?: "BAT" | "BOWL";
     playersPerTeam?: number;
   }): Promise<Match> => {
     const response = await api.post("/matches", data);

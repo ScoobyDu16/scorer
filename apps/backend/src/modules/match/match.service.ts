@@ -806,6 +806,10 @@ export const getMatchScoreService = async (matchId: string) => {
     teamBName: match.teamBName,
     overs: match.overs,
 
+    // Toss information
+    tossWinner: match.tossWinner,
+    tossDecision: match.tossDecision,
+
     target,
     currentRunRate,
     requiredRuns,
