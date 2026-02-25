@@ -9,6 +9,7 @@ import {
   getMatchScore,
   getMatches,
   startMatch,
+  startSecondInnings,
   undoLastBall,
 } from "./match.controller";
 
@@ -27,6 +28,8 @@ router.post("/:matchId/players", authMiddleware, addMatchPlayers);
 router.get("/:matchId/players", authMiddleware, getMatchPlayers);
 
 router.post("/:matchId/start", authMiddleware, startMatch);
+
+router.post("/:matchId/start-second", authMiddleware, startSecondInnings);
 
 router.post("/:matchId/balls", authMiddleware, addBall);
 

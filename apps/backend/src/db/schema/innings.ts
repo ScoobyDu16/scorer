@@ -9,16 +9,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { matches } from "./matches";
-import { teamEnum } from "./enums";
+import { teamEnum, inningsStatusEnum } from "./enums";
 import { players } from "./players";
-
-/**
- * Innings status enum
- */
-export const inningsStatusEnum = pgEnum("innings_status", [
-  "LIVE",
-  "COMPLETED",
-]);
 
 export const innings = pgTable(
   "innings",
@@ -34,29 +26,38 @@ export const innings = pgTable(
     battingTeam: teamEnum("batting_team").notNull(),
 
     // Opening players - stored once at innings start, used only until first ball is delivered
-    openingStrikerId: uuid("opening_striker_id")
-      .references(() => players.id, { onDelete: "set null" }),
-    
-    openingNonStrikerId: uuid("opening_non_striker_id")
-      .references(() => players.id, { onDelete: "set null" }),
+    openingStrikerId: uuid("opening_striker_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+
+    openingNonStrikerId: uuid("opening_non_striker_id").references(
+      () => players.id,
+      { onDelete: "set null" },
+    ),
 
     // Current striker tracking - updated after each ball
-    currentStrikerId: uuid("current_striker_id")
-      .references(() => players.id, { onDelete: "set null" }),
-    
-    currentNonStrikerId: uuid("current_non_striker_id")
-      .references(() => players.id, { onDelete: "set null" }),
+    currentStrikerId: uuid("current_striker_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+
+    currentNonStrikerId: uuid("current_non_striker_id").references(
+      () => players.id,
+      { onDelete: "set null" },
+    ),
 
     // Current bowler tracking - updated after each over
-    currentBowlerId: uuid("current_bowler_id")
-      .references(() => players.id, { onDelete: "set null" }),
+    currentBowlerId: uuid("current_bowler_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
 
     totalRuns: integer("total_runs").default(0).notNull(),
     totalWickets: integer("total_wickets").default(0).notNull(),
 
     totalBalls: integer("total_balls").default(0).notNull(),
 
-    status: inningsStatusEnum("status").default("LIVE").notNull(),
+    status: inningsStatusEnum("status")
+      .default(inningsStatusEnum.enumValues[0])
+      .notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

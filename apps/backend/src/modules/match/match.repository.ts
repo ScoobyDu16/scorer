@@ -3,6 +3,7 @@ import { sql, desc, eq, and } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { innings, matches, matchPlayers, players } from "../../db/schema";
+import { matchStatusEnum, inningsStatusEnum } from "../../db/schema/enums";
 
 export const createMatchRepo = async (data: any) => {
   const [match] = await db.insert(matches).values(data).returning();
@@ -28,6 +29,20 @@ export const getMatchPlayersRepo = async (matchId: string) => {
     .from(matchPlayers)
     .leftJoin(players, eq(matchPlayers.playerId, players.id))
     .where(eq(matchPlayers.matchId, matchId));
+};
+
+export const getInningsByNumberRepo = async (matchId: string, inningsNumber: number) => {
+  const inningsResult = await db
+    .select()
+    .from(innings)
+    .where(
+      and(
+        eq(innings.matchId, matchId),
+        eq(innings.inningsNumber, inningsNumber),
+      ),
+    );
+
+  return inningsResult[0];
 };
 
 export const getMatchByIdRepo = async (matchId: string) => {
@@ -142,7 +157,7 @@ export const getInningsByIdRepo = async (inningsId: string) => {
 
 export const updateInningsStatusRepo = async (
   inningsId: string,
-  status: "COMPLETED",
+  status: "LIVE" | "UPCOMING" | "COMPLETED",
 ) => {
   await db
     .update(innings)
@@ -174,7 +189,7 @@ export const completeMatchRepo = async (matchId: string) => {
   await db
     .update(matches)
     .set({
-      status: "COMPLETED",
+      status: matchStatusEnum.enumValues[2], // COMPLETED
       endTime: new Date(),
     })
     .where(eq(matches.id, matchId));
@@ -189,6 +204,25 @@ export const updateInningsCurrentPlayersRepo = async (
   await db
     .update(innings)
     .set({
+      currentStrikerId: strikerId,
+      currentNonStrikerId: nonStrikerId,
+      currentBowlerId: bowlerId || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(innings.id, inningsId));
+};
+
+export const updateInningsOpeningPlayersRepo = async (
+  inningsId: string,
+  strikerId: string,
+  nonStrikerId: string,
+  bowlerId?: string,
+) => {
+  await db
+    .update(innings)
+    .set({
+      openingStrikerId: strikerId,
+      openingNonStrikerId: nonStrikerId,
       currentStrikerId: strikerId,
       currentNonStrikerId: nonStrikerId,
       currentBowlerId: bowlerId || null,

@@ -118,6 +118,486 @@ export const ScoringPage: React.FC = () => {
     }
   }, [liveData?.isOverCompleted, currentInnings]);
 
+  // Determine match state based on backend data
+  const getMatchState = () => {
+    if (!matchScore) return "LOADING";
+    if (matchScore.status === "COMPLETED") return "MATCH_COMPLETED";
+
+    const currentInningsData = matchScore.innings?.find(
+      (i: any) => i.inningsNumber === matchScore.currentInnings,
+    );
+
+    if (!currentInningsData) return "INNINGS_SETUP";
+    if (currentInningsData.status === "UPCOMING") {
+      return matchScore.currentInnings === 1
+        ? "INNINGS_SETUP"
+        : "INNINGS_BREAK";
+    }
+    if (currentInningsData.status === "COMPLETED") {
+      return matchScore.currentInnings === 1
+        ? "INNINGS_BREAK"
+        : "MATCH_COMPLETED";
+    }
+
+    return "INNINGS_LIVE";
+  };
+
+  const matchState = getMatchState();
+
+  // Handlers for state transitions
+  const handleStartInnings = async (data: {
+    strikerId: string;
+    nonStrikerId: string;
+    bowlerId: string;
+  }) => {
+    try {
+      await matchAPI.startMatch(matchId!, data);
+      queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
+    } catch (error: any) {
+      alert(`Error starting innings: ${error.message}`);
+    }
+  };
+
+  const handleStartSecondInnings = async (data: {
+    strikerId: string;
+    nonStrikerId: string;
+    bowlerId: string;
+  }) => {
+    try {
+      await matchAPI.startSecondInnings(matchId!, data);
+      queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
+    } catch (error: any) {
+      alert(`Error starting second innings: ${error.message}`);
+    }
+  };
+
+  // Component for match completed state
+  const MatchCompletedScreen = ({ matchScore }: { matchScore: any }) => {
+    const completedInnings =
+      matchScore.innings?.filter((i: any) => i.status === "COMPLETED") || [];
+    const firstInnings = completedInnings.find(
+      (i: any) => i.inningsNumber === 1,
+    );
+    const secondInnings = completedInnings.find(
+      (i: any) => i.inningsNumber === 2,
+    );
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="max-w-2xl w-full mx-auto px-4">
+          <div className="bg-white shadow rounded-lg p-8">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-6">
+                Match Completed
+              </h1>
+
+              {/* Result Display */}
+              <div className="text-2xl font-semibold text-green-600 mb-8">
+                {matchScore.result}
+              </div>
+
+              {/* Scorecard */}
+              <div className="space-y-6 mb-8">
+                {firstInnings && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-2">
+                      {matchScore.teamAName} - 1st Innings
+                    </h3>
+                    <div className="text-xl">
+                      {firstInnings.totalRuns}/{firstInnings.totalWickets}
+                      <span className="text-gray-600 ml-2">
+                        ({firstInnings.totalOvers} overs)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {secondInnings && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-2">
+                      {matchScore.teamBName} - 2nd Innings
+                    </h3>
+                    <div className="text-xl">
+                      {secondInnings.totalRuns}/{secondInnings.totalWickets}
+                      <span className="text-gray-600 ml-2">
+                        ({secondInnings.totalOvers} overs)
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Man of the Match */}
+              {matchScore.manOfTheMatch && (
+                <div className="bg-blue-50 rounded-lg p-4 mb-8">
+                  <h3 className="font-semibold text-lg mb-2">
+                    Man of the Match
+                  </h3>
+                  <div className="text-xl">{matchScore.manOfTheMatch.name}</div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-center space-x-4">
+                <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                  View Scorecard
+                </button>
+                <button className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700">
+                  Share
+                </button>
+                <button
+                  onClick={() => navigate("/")}
+                  className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Start New Match
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Component for innings break state
+  const InningsBreakScreen = ({
+    matchScore,
+    onStartSecondInnings,
+  }: {
+    matchScore: any;
+    onStartSecondInnings: (data: any) => void;
+  }) => {
+    const [showSetup, setShowSetup] = useState(false);
+    const [selectedStriker, setSelectedStriker] = useState("");
+    const [selectedNonStriker, setSelectedNonStriker] = useState("");
+    const [selectedBowler, setSelectedBowler] = useState("");
+
+    const firstInnings = matchScore.innings?.find(
+      (i: any) => i.inningsNumber === 1,
+    );
+    const secondBattingTeam = firstInnings?.battingTeam === "A" ? "B" : "A";
+    const secondBattingTeamName =
+      secondBattingTeam === "A" ? matchScore.teamAName : matchScore.teamBName;
+
+    const handleStartSecondInnings = () => {
+      if (!selectedStriker || !selectedNonStriker || !selectedBowler) {
+        alert("Please select all players");
+        return;
+      }
+      onStartSecondInnings({
+        strikerId: selectedStriker,
+        nonStrikerId: selectedNonStriker,
+        bowlerId: selectedBowler,
+      });
+    };
+
+    if (!showSetup) {
+      // Show banner view
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div className="px-4 py-6 sm:px-0">
+              {/* Innings Break Banner */}
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-blue-900">
+                      Innings Break - Ready to Start 2nd Innings
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <div className="font-semibold">
+                        Target:{" "}
+                        {firstInnings?.totalRuns
+                          ? firstInnings.totalRuns + 1
+                          : 0}{" "}
+                        runs
+                      </div>
+                      <div>
+                        {secondBattingTeamName} needs{" "}
+                        {firstInnings?.totalRuns
+                          ? firstInnings.totalRuns + 1
+                          : 0}{" "}
+                        runs to win
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSetup(true)}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                  >
+                    Start 2nd Innings
+                  </button>
+                </div>
+              </div>
+
+              {/* First Innings Summary */}
+              {firstInnings && (
+                <div className="bg-white shadow rounded-lg p-6 mb-6">
+                  <h3 className="font-semibold text-lg mb-4">
+                    First Innings Summary
+                  </h3>
+                  <div className="text-2xl font-bold mb-2">
+                    {matchScore.teamAName}: {firstInnings.totalRuns}/
+                    {firstInnings.totalWickets}
+                    <span className="text-gray-600 ml-2">
+                      ({firstInnings.totalOvers} overs)
+                    </span>
+                  </div>
+                  <div className="text-lg text-gray-700">
+                    Run Rate:{" "}
+                    {calculateRunRate(
+                      firstInnings.totalRuns,
+                      firstInnings.totalOvers,
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show setup view
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="max-w-2xl w-full mx-auto px-4">
+          <div className="bg-white shadow rounded-lg p-8">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-6">
+                Start Second Innings
+              </h1>
+
+              {/* Target Display */}
+              <div className="bg-blue-50 rounded-lg p-6 mb-8">
+                <h3 className="font-semibold text-lg mb-4">
+                  Target for {secondBattingTeamName}
+                </h3>
+                <div className="text-3xl font-bold text-blue-600">
+                  {firstInnings?.totalRuns ? firstInnings.totalRuns + 1 : 0}{" "}
+                  runs
+                </div>
+              </div>
+
+              {/* Player Selection */}
+              <div className="space-y-6">
+                <h3 className="font-semibold text-lg">
+                  Select Opening Players
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opening Striker
+                  </label>
+                  <select
+                    value={selectedStriker}
+                    onChange={(e) => setSelectedStriker(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select striker...</option>
+                    {playersYetToBat?.map((player: any) => (
+                      <option key={player.id} value={player.id}>
+                        {player.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opening Non-Striker
+                  </label>
+                  <select
+                    value={selectedNonStriker}
+                    onChange={(e) => setSelectedNonStriker(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select non-striker...</option>
+                    {playersYetToBat
+                      ?.filter((p: any) => p.id !== selectedStriker)
+                      ?.map((player: any) => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opening Bowler
+                  </label>
+                  <select
+                    value={selectedBowler}
+                    onChange={(e) => setSelectedBowler(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select bowler...</option>
+                    {matchPlayers
+                      ?.filter((p: any) => p.team === (secondBattingTeam === "A" ? "B" : "A"))
+                      ?.map((player: any) => (
+                        <option key={player.playerId} value={player.playerId}>
+                          {player.player?.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleStartSecondInnings}
+                    disabled={
+                      !selectedStriker || !selectedNonStriker || !selectedBowler
+                    }
+                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Start Second Innings
+                  </button>
+                  <button
+                    onClick={() => setShowSetup(false)}
+                    className="flex-1 px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Component for innings setup state
+  const InningsSetupScreen = ({
+    matchScore,
+    onStartInnings,
+  }: {
+    matchScore: any;
+    onStartInnings: (data: any) => void;
+  }) => {
+    const [selectedStriker, setSelectedStriker] = useState("");
+    const [selectedNonStriker, setSelectedNonStriker] = useState("");
+    const [selectedBowler, setSelectedBowler] = useState("");
+
+    const battingTeam = matchScore.currentInnings === 1 ? "A" : "B";
+    const battingTeamName =
+      battingTeam === "A" ? matchScore.teamAName : matchScore.teamBName;
+    const bowlingTeamName =
+      battingTeam === "A" ? matchScore.teamBName : matchScore.teamAName;
+
+    const handleStartInnings = () => {
+      if (!selectedStriker || !selectedNonStriker || !selectedBowler) {
+        alert("Please select all players");
+        return;
+      }
+      onStartInnings({
+        strikerId: selectedStriker,
+        nonStrikerId: selectedNonStriker,
+        bowlerId: selectedBowler,
+      });
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="max-w-2xl w-full mx-auto px-4">
+          <div className="bg-white shadow rounded-lg p-8">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-6">
+                Start {matchScore.currentInnings === 1 ? "First" : "Second"}{" "}
+                Innings
+              </h1>
+
+              <div className="space-y-6">
+                <h3 className="font-semibold text-lg">
+                  {battingTeamName} to Bat
+                </h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opening Striker
+                  </label>
+                  <select
+                    value={selectedStriker}
+                    onChange={(e) => setSelectedStriker(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select striker...</option>
+                    {matchPlayers
+                      ?.filter((p: any) => p.team === battingTeam)
+                      ?.map((player: any) => (
+                        <option key={player.playerId} value={player.playerId}>
+                          {player.player?.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opening Non-Striker
+                  </label>
+                  <select
+                    value={selectedNonStriker}
+                    onChange={(e) => setSelectedNonStriker(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select non-striker...</option>
+                    {matchPlayers
+                      ?.filter(
+                        (p: any) =>
+                          p.team === battingTeam &&
+                          p.playerId !== selectedStriker,
+                      )
+                      ?.map((player: any) => (
+                        <option key={player.playerId} value={player.playerId}>
+                          {player.player?.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Opening Bowler ({bowlingTeamName})
+                  </label>
+                  <select
+                    value={selectedBowler}
+                    onChange={(e) => setSelectedBowler(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select bowler...</option>
+                    {matchPlayers
+                      ?.filter(
+                        (p: any) =>
+                          p.team === (battingTeam === "A" ? "B" : "A"),
+                      )
+                      ?.map((player: any) => (
+                        <option key={player.playerId} value={player.playerId}>
+                          {player.player?.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={handleStartInnings}
+                  disabled={
+                    !selectedStriker || !selectedNonStriker || !selectedBowler
+                  }
+                  className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  Start {matchScore.currentInnings === 1 ? "First" : "Second"}{" "}
+                  Innings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Get available bowlers (bowling team players, excluding current bowler)
   const getAvailableBowlers = () => {
     if (!matchPlayers || !currentInnings || !liveData?.bowler) return [];
@@ -360,17 +840,6 @@ export const ScoringPage: React.FC = () => {
     return (runs / decimalOvers).toFixed(2);
   };
 
-  const calculateRequiredRunRate = (
-    target: number,
-    currentRuns: number,
-    balls: number,
-  ) => {
-    if (balls === 0) return 0;
-    const remainingRuns = target - currentRuns;
-    const remainingOvers = balls / 6;
-    return (remainingRuns / remainingOvers).toFixed(2);
-  };
-
   if (scoreLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center">
@@ -387,6 +856,46 @@ export const ScoringPage: React.FC = () => {
     );
   }
 
+  // State-based rendering
+  if (matchState === "MATCH_COMPLETED") {
+    return <MatchCompletedScreen matchScore={matchScore} />;
+  }
+
+  if (matchState === "INNINGS_BREAK") {
+    return (
+      <InningsBreakScreen
+        matchScore={matchScore}
+        onStartSecondInnings={handleStartSecondInnings}
+      />
+    );
+  }
+
+  if (matchState === "INNINGS_SETUP") {
+    return (
+      <InningsSetupScreen
+        matchScore={matchScore}
+        onStartInnings={handleStartInnings}
+      />
+    );
+  }
+
+  if (matchState === "LOADING") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!matchScore) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="text-red-600">Match score not found.</div>
+      </div>
+    );
+  }
+
+  // Default: INNINGS_LIVE - Show scoring interface
   const battingTeam =
     currentInnings?.battingTeam === "A"
       ? matchScore.teamAName
@@ -414,19 +923,10 @@ export const ScoringPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="mt-2 text-sm text-gray-600">
-                  CRR:{" "}
-                  {calculateRunRate(
-                    currentInnings?.totalRuns || 0,
-                    currentInnings?.totalOvers || 0,
-                  )}
+                  CRR: {matchScore.currentRunRate}
                   {matchScore.currentInnings === 2 && matchScore.target && (
                     <span className="ml-4">
-                      RR:{" "}
-                      {calculateRequiredRunRate(
-                        matchScore.target,
-                        currentInnings?.totalRuns || 0,
-                        currentInnings?.totalOvers || 0,
-                      )}
+                      RR: {matchScore.requiredRunRate}
                     </span>
                   )}
                 </div>

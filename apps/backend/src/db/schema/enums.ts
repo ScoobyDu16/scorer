@@ -11,6 +11,7 @@ export const matchStatusEnum = pgEnum("match_status", [
 export const tossDecisionEnum = pgEnum("toss_decision", ["BAT", "BOWL"]);
 
 export const inningsStatusEnum = pgEnum("innings_status", [
+  "UPCOMING",
   "LIVE",
   "COMPLETED",
 ]);

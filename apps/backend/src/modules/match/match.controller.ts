@@ -11,6 +11,7 @@ import {
   getMatchPlayersService,
   getMatchesService,
   startInningsService,
+  startSecondInningsService,
   undoLastBallService,
 } from "./match.service";
 
@@ -124,6 +125,27 @@ export const startMatch = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     businessLogger.error('starting match', error, { matchId: req.params.matchId as string });
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const startSecondInnings = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    const { strikerId, nonStrikerId, bowlerId } = req.body;
+
+    businessLogger.start('starting second innings', { matchId, strikerId, nonStrikerId, bowlerId });
+
+    const innings = await startSecondInningsService(matchId, { strikerId, nonStrikerId, bowlerId });
+    
+    businessLogger.success('second innings started', { matchId, inningsId: innings.id });
+    
+    res.json({
+      message: "Second innings started",
+      innings,
+    });
+  } catch (error: any) {
+    businessLogger.error('starting second innings', error, { matchId: req.params.matchId as string });
     res.status(400).json({ message: error.message });
   }
 };

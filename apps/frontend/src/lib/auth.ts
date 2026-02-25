@@ -180,6 +180,18 @@ export const matchAPI = {
     return response.data;
   },
 
+  startSecondInnings: async (
+    matchId: string,
+    data: {
+      strikerId: string;
+      nonStrikerId: string;
+      bowlerId: string;
+    },
+  ): Promise<any> => {
+    const response = await api.post(`/matches/${matchId}/start-second`, data);
+    return response.data;
+  },
+
   getMatchScore: async (matchId: string) => {
     const response = await api.get(`/matches/${matchId}/score`);
     return response.data;
