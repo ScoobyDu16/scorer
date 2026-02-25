@@ -41,15 +41,14 @@ export const validateAccessCode = async (req: any, res: Response) => {
       throw new Error("Invalid or expired code");
     }
 
-    // Get match details to include playersPerTeam
+    // Get updated match details (status should now be ACCESS_VERIFIED)
     const match = await getMatchByIdRepo(matchId);
-
-    await markAccessCodeUsedRepo(record.id);
 
     res.json({
       message: "Code valid",
       matchId: record.matchId,
       turfId: record.turfId,
+      status: match.status,
       match: {
         id: match.id,
         teamAName: match.teamAName,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { accessCodeAPI } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
+import { getRouteWithMatchId, MatchStatus } from '../lib/enums';
 
 export const AccessCodePage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,8 +30,11 @@ export const AccessCodePage: React.FC = () => {
     onSuccess: (data) => {
       // Store match info in localStorage for later use
       localStorage.setItem('currentMatch', JSON.stringify(data));
-      // Redirect directly to match setup
-      navigate(`/match-setup/${formData.matchId}`);
+      
+      // Redirect based on match status using enum-based routing with matchId
+      const matchStatus = data.status as MatchStatus;
+      const targetRoute = getRouteWithMatchId(matchStatus, data.matchId);
+      navigate(targetRoute);
     },
     onError: (error: any) => {
       alert(`Invalid or expired code: ${error.message}`);

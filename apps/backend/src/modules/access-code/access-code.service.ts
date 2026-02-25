@@ -1,10 +1,11 @@
-import { getMatchByIdRepo } from "../match/match.repository";
+import { getMatchByIdRepo, updateMatchRepo } from "../match/match.repository";
 import {
   createAccessCodeRepo,
   findValidAccessCodeRepo,
   markAccessCodeUsedRepo,
   getMatchesWithActiveCodesRepo,
 } from "./access-code.repository";
+import { MATCH_STATUS } from "../../db/schema/enums";
 
 /**
  * Generate random 6 digit code
@@ -57,6 +58,9 @@ export const validateAccessCodeService = async (
   }
 
   await markAccessCodeUsedRepo(record.id);
+
+  // Update match status to ACCESS_VERIFIED after successful validation
+  await updateMatchRepo(matchId, { status: MATCH_STATUS.ACCESS_VERIFIED });
 
   return record;
 };

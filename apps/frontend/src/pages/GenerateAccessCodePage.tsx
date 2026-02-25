@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { matchAPI, accessCodeAPI } from '../lib/auth';
+import { MATCH_STATUS } from '../lib/enums';
 
 export const GenerateAccessCodePage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -15,8 +16,8 @@ export const GenerateAccessCodePage: React.FC = () => {
     queryFn: matchAPI.getMatches,
   });
 
-  // Filter upcoming matches
-  const upcomingMatches = matches?.filter(match => match.status === 'UPCOMING') || [];
+  // Filter matches ready for access code generation
+  const availableMatches = matches?.filter(match => match.status === MATCH_STATUS.CREATED) || [];
 
   const generateCodeMutation = useMutation({
     mutationFn: accessCodeAPI.generateAccessCode,
@@ -74,10 +75,10 @@ export const GenerateAccessCodePage: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     >
                       <option value="">Choose a match...</option>
-                      {upcomingMatches.length === 0 ? (
-                        <option disabled>No upcoming matches available</option>
+                      {availableMatches.length === 0 ? (
+                        <option disabled>No available matches</option>
                       ) : (
-                        upcomingMatches.map((match) => (
+                        availableMatches.map((match: any) => (
                           <option key={match.id} value={match.id}>
                             {match.teamAName} vs {match.teamBName} - {new Date(match.createdAt).toLocaleDateString()}
                           </option>
@@ -86,15 +87,15 @@ export const GenerateAccessCodePage: React.FC = () => {
                     </select>
                   </div>
 
-                  {upcomingMatches.length === 0 && (
+                  {availableMatches.length === 0 && (
                     <div className="text-center py-8">
                       <p className="text-gray-500">
-                        No upcoming matches found. Create a match first to generate access codes.
+                        No available matches found. Create a match first to generate access codes.
                       </p>
                     </div>
                   )}
 
-                  {upcomingMatches.length > 0 && (
+                  {availableMatches.length > 0 && (
                     <div className="flex justify-end">
                       <button
                         onClick={handleGenerateCode}

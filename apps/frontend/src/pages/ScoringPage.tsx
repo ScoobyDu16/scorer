@@ -2,15 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { matchAPI, playerAPI } from "../lib/auth";
-
-type WicketType =
-  | "BOWLED"
-  | "CAUGHT"
-  | "CAUGHT_AND_BOWLED"
-  | "RUN_OUT"
-  | "LBW"
-  | "STUMPED"
-  | "HIT_WICKET";
+import { WicketType, getWicketTypeDisplay, getRouteForMatchStatus, MatchStatus, WICKET_TYPE } from "../lib/enums";
 
 interface WicketData {
   wicketType: WicketType;
@@ -33,9 +25,9 @@ export const ScoringPage: React.FC = () => {
   // Wicket-related state
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [selectedWicketType, setSelectedWicketType] =
-    useState<WicketType>("BOWLED");
+    useState<WicketType>(WICKET_TYPE.BOWLED);
   const [wicketData, setWicketData] = useState<WicketData>({
-    wicketType: "BOWLED",
+    wicketType: WICKET_TYPE.BOWLED,
     dismissedPlayerId: "",
     newBatsmanId: "",
     fielderId: "",
@@ -717,12 +709,12 @@ export const ScoringPage: React.FC = () => {
     if (!value) {
       // Reset wicket data when unchecking
       setWicketData({
-        wicketType: "BOWLED",
+        wicketType: WICKET_TYPE.BOWLED,
         dismissedPlayerId: "",
         newBatsmanId: "",
         fielderId: "",
       });
-      setSelectedWicketType("BOWLED");
+      setSelectedWicketType(WICKET_TYPE.BOWLED);
     }
   };
 
@@ -775,7 +767,7 @@ export const ScoringPage: React.FC = () => {
       setIsWicket(false);
       setShowWicketModal(false);
       setWicketData({
-        wicketType: "BOWLED",
+        wicketType: WICKET_TYPE.BOWLED,
         dismissedPlayerId: "",
         newBatsmanId: "",
         fielderId: "",
@@ -825,14 +817,12 @@ export const ScoringPage: React.FC = () => {
 
     // Check if fielder is required
     if (
-      selectedWicketType === "CAUGHT" ||
-      selectedWicketType === "STUMPED" ||
-      selectedWicketType === "RUN_OUT"
+      [WICKET_TYPE.CAUGHT, WICKET_TYPE.STUMPED, WICKET_TYPE.RUN_OUT].includes(
+        selectedWicketType,
+      )
     ) {
       if (!wicketData.fielderId) {
-        alert(
-          `Fielder is required for ${selectedWicketType.replace("_", " ")}`,
-        );
+        alert("Fielder is required for this wicket type");
         return;
       }
     }
@@ -842,10 +832,10 @@ export const ScoringPage: React.FC = () => {
     let finalFielderId: string | null | undefined = wicketData.fielderId;
 
     if (
-      selectedWicketType === "CAUGHT" &&
+      selectedWicketType === WICKET_TYPE.CAUGHT &&
       wicketData.fielderId === currentPlayers.bowler?.id
     ) {
-      finalWicketType = "CAUGHT_AND_BOWLED";
+      finalWicketType = WICKET_TYPE.CAUGHT_AND_BOWLED;
       finalFielderId = undefined; // Don't send fielderId for caught & bowled
     }
 
@@ -1341,17 +1331,15 @@ export const ScoringPage: React.FC = () => {
               </label>
               <select
                 value={selectedWicketType}
-                onChange={(e) =>
-                  handleWicketTypeChange(e.target.value as WicketType)
-                }
+                onChange={(e) => setSelectedWicketType(e.target.value as WicketType)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="BOWLED">Bowled</option>
-                <option value="CAUGHT">Caught</option>
-                <option value="RUN_OUT">Run Out</option>
-                <option value="LBW">LBW</option>
-                <option value="STUMPED">Stumped</option>
-                <option value="HIT_WICKET">Hit Wicket</option>
+                <option value={WICKET_TYPE.BOWLED}>{getWicketTypeDisplay(WICKET_TYPE.BOWLED)}</option>
+                <option value={WICKET_TYPE.CAUGHT}>{getWicketTypeDisplay(WICKET_TYPE.CAUGHT)}</option>
+                <option value={WICKET_TYPE.RUN_OUT}>{getWicketTypeDisplay(WICKET_TYPE.RUN_OUT)}</option>
+                <option value={WICKET_TYPE.LBW}>{getWicketTypeDisplay(WICKET_TYPE.LBW)}</option>
+                <option value={WICKET_TYPE.STUMPED}>{getWicketTypeDisplay(WICKET_TYPE.STUMPED)}</option>
+                <option value={WICKET_TYPE.HIT_WICKET}>{getWicketTypeDisplay(WICKET_TYPE.HIT_WICKET)}</option>
               </select>
             </div>
 
@@ -1406,13 +1394,13 @@ export const ScoringPage: React.FC = () => {
               </select>
             </div>
 
-            {(selectedWicketType === "CAUGHT" ||
-              selectedWicketType === "STUMPED" ||
-              selectedWicketType === "RUN_OUT") && (
+            {(selectedWicketType === WICKET_TYPE.CAUGHT ||
+              selectedWicketType === WICKET_TYPE.STUMPED ||
+              selectedWicketType === WICKET_TYPE.RUN_OUT) && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fielder{" "}
-                  {selectedWicketType === "STUMPED" ? "(Wicketkeeper)" : ""}
+                  {selectedWicketType === WICKET_TYPE.STUMPED ? "(Wicketkeeper)" : ""}
                 </label>
                 <select
                   value={wicketData.fielderId || ""}
@@ -1424,12 +1412,12 @@ export const ScoringPage: React.FC = () => {
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required={
-                    selectedWicketType === "CAUGHT" ||
-                    selectedWicketType === "STUMPED"
+                    selectedWicketType === WICKET_TYPE.CAUGHT ||
+                    selectedWicketType === WICKET_TYPE.STUMPED
                   }
                 >
                   <option value="">
-                    {selectedWicketType === "STUMPED"
+                    {selectedWicketType === WICKET_TYPE.STUMPED
                       ? "Select wicketkeeper..."
                       : "Select fielder..."}
                   </option>
@@ -1462,9 +1450,9 @@ export const ScoringPage: React.FC = () => {
                 disabled={
                   !wicketData.dismissedPlayerId ||
                   !wicketData.newBatsmanId ||
-                  (selectedWicketType === "CAUGHT" && !wicketData.fielderId) ||
-                  (selectedWicketType === "STUMPED" && !wicketData.fielderId) ||
-                  (selectedWicketType === "RUN_OUT" && !wicketData.fielderId)
+                  (selectedWicketType === WICKET_TYPE.CAUGHT && !wicketData.fielderId) ||
+                  (selectedWicketType === WICKET_TYPE.STUMPED && !wicketData.fielderId) ||
+                  (selectedWicketType === WICKET_TYPE.RUN_OUT && !wicketData.fielderId)
                 }
                 className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
               >

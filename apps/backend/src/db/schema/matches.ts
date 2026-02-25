@@ -37,7 +37,7 @@ export const matches = pgTable("matches", {
   tossWinner: teamEnum("toss_winner"),
   tossDecision: tossDecisionEnum("toss_decision"),
 
-  status: matchStatusEnum("status").default("UPCOMING").notNull(),
+  status: matchStatusEnum("status").default("CREATED").notNull(),
 
   currentInnings: integer("current_innings").default(1).notNull(),
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { playerAPI, matchAPI } from "../lib/auth";
 import { useNavigate, useParams } from "react-router-dom";
+import { getRouteWithMatchId, MATCH_STATUS } from "../lib/enums";
 
 interface Player {
   id: string;
@@ -132,6 +133,12 @@ export const MatchSetupPage: React.FC = () => {
     onSuccess: () => {
       setShowPlayerSelectionModal(true);
       queryClient.invalidateQueries({ queryKey: ["players"] });
+      
+      // Redirect to opening players selection page
+      if (matchId) {
+        const openingRoute = getRouteWithMatchId(MATCH_STATUS.PLAYERS_ADDED, matchId);
+        navigate(openingRoute);
+      }
     },
     onError: (error: any) => {
       alert(`Error adding players: ${error.message}`);
