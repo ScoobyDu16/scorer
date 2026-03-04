@@ -12,7 +12,6 @@ export const matchStatusEnum = pgEnum("match_status", [
   "CREATED",
   "ACCESS_VERIFIED", 
   "PLAYERS_ADDED",
-  "OPENING_PENDING",
   "LIVE",
   "COMPLETED",
 ]);
@@ -22,7 +21,6 @@ export const MATCH_STATUS = {
   CREATED: "CREATED" as const,
   ACCESS_VERIFIED: "ACCESS_VERIFIED" as const,
   PLAYERS_ADDED: "PLAYERS_ADDED" as const,
-  OPENING_PENDING: "OPENING_PENDING" as const,
   LIVE: "LIVE" as const,
   COMPLETED: "COMPLETED" as const,
 } as const;

@@ -178,11 +178,11 @@ export const startSecondInningsService = async (
     openingBowlerId: data.bowlerId,
   });
 
-  // Update match status to live and set opening players set status
+  // Update match status to live and set current innings to 2
   await updateMatchRepo(matchId, {
     status: MATCH_STATUS.LIVE,
+    currentInnings: 2,
     matchStartedStatus: "LIVE",
-    openingPlayersSetStatus: "OPENING_PENDING",
   });
 
   matchServiceLogger.success("second innings started", {
