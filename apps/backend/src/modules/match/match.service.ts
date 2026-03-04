@@ -28,6 +28,7 @@ import {
   getMatchesByTurfRepo,
   revertInningsTotalsRepo,
   updateInningsCurrentPlayersRepo,
+  updateInningsOpeningPlayersRepo,
   updateInningsExtrasRepo,
   updateInningsStatusRepo,
   updateInningsTotalsRepo,
@@ -168,15 +169,79 @@ export const startSecondInningsService = async (
     );
   }
 
-  const secondInnings = await createInningsRepo({
+  // Find the existing second innings with UPCOMING status
+  const secondInnings = match.innings.find((i: any) => 
+    i.inningsNumber === 2 && i.status === INNINGS_STATUS.UPCOMING
+  );
+
+  if (!secondInnings) {
+    matchServiceLogger.error(
+      "starting second innings",
+      new Error("Second innings with UPCOMING status not found"),
+      { matchId },
+    );
+    throw new Error("Second innings not found or already started");
+  }
+
+  // Validate that all player IDs exist
+  const strikerPlayer = await getPlayerByIdRepo(data.strikerId);
+  const nonStrikerPlayer = await getPlayerByIdRepo(data.nonStrikerId);
+  const bowlerPlayer = await getPlayerByIdRepo(data.bowlerId);
+
+  if (!strikerPlayer || !nonStrikerPlayer || !bowlerPlayer) {
+    matchServiceLogger.error(
+      "starting second innings",
+      new Error("One or more player IDs are invalid"),
+      { 
+        strikerId: data.strikerId,
+        nonStrikerId: data.nonStrikerId,
+        bowlerId: data.bowlerId,
+        strikerExists: !!strikerPlayer,
+        nonStrikerExists: !!nonStrikerPlayer,
+        bowlerExists: !!bowlerPlayer,
+      },
+    );
+    throw new Error("One or more player IDs are invalid");
+  }
+
+  // Update the existing second innings with player details and change status to LIVE
+  await updateInningsOpeningPlayersRepo(
+    secondInnings.id,
+    data.strikerId,
+    data.nonStrikerId,
+    data.bowlerId,
+  );
+  
+  await updateInningsStatusRepo(secondInnings.id, INNINGS_STATUS.LIVE);
+  
+  // Create player stats for second innings opening players
+  const battingTeam = secondInnings.battingTeam;
+  const bowlingTeam = battingTeam === TEAM.A ? TEAM.B : TEAM.A;
+  
+  // Create stats for opening batsmen
+  await upsertPlayerMatchStatsRepo(
     matchId,
-    inningsNumber: 2,
-    battingTeam: data.strikerId === "A" ? TEAM.B : TEAM.A,
-    status: INNINGS_STATUS.LIVE,
-    openingStrikerId: data.strikerId,
-    openingNonStrikerId: data.nonStrikerId,
-    openingBowlerId: data.bowlerId,
-  });
+    data.strikerId,
+    battingTeam,
+    1, // Opening striker gets batting order 1
+  );
+  await upsertPlayerMatchStatsRepo(
+    matchId,
+    data.nonStrikerId,
+    battingTeam,
+    2, // Opening non-striker gets batting order 2
+  );
+
+  // Create stats for opening bowler (bowling team)
+  await upsertPlayerMatchStatsRepo(
+    matchId,
+    data.bowlerId,
+    bowlingTeam,
+    undefined, // Bowlers don't have batting order
+  );
+  
+  // Get the updated innings to return
+  const updatedInnings = await getInningsByIdRepo(secondInnings.id);
 
   // Update match status to live and set current innings to 2
   await updateMatchRepo(matchId, {
@@ -187,12 +252,12 @@ export const startSecondInningsService = async (
 
   matchServiceLogger.success("second innings started", {
     matchId,
-    inningsId: secondInnings.id,
+    inningsId: updatedInnings.id,
   });
 
   return {
     message: "Second innings started",
-    innings: secondInnings,
+    innings: updatedInnings,
   };
 };
 
@@ -653,11 +718,12 @@ export const endInningsService = async (matchId: string) => {
     const nextBattingTeam =
       currentInnings.battingTeam === TEAM.A ? TEAM.B : TEAM.A;
 
+    // Create second innings with UPCOMING status
     const secondInnings = await createInningsRepo({
       matchId,
       inningsNumber: 2,
       battingTeam: nextBattingTeam,
-      status: INNINGS_STATUS.LIVE,
+      status: INNINGS_STATUS.UPCOMING,
     });
 
     await updateMatchRepo(matchId, {
@@ -665,7 +731,7 @@ export const endInningsService = async (matchId: string) => {
     });
 
     return {
-      message: "Second innings started",
+      message: "First innings completed, second innings ready",
       innings: secondInnings,
     };
   }

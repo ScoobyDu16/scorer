@@ -32,8 +32,10 @@ export const OpeningPlayersPage: React.FC = () => {
   });
 
   // Filter players by team
-  const teamAPlayers = matchPlayers?.filter((p: MatchPlayer) => p.team === "A") || [];
-  const teamBPlayers = matchPlayers?.filter((p: MatchPlayer) => p.team === "B") || [];
+  const teamAPlayers =
+    matchPlayers?.filter((p: MatchPlayer) => p.team === "A") || [];
+  const teamBPlayers =
+    matchPlayers?.filter((p: MatchPlayer) => p.team === "B") || [];
 
   // Start match mutation
   const startMatchMutation = useMutation({
@@ -45,7 +47,7 @@ export const OpeningPlayersPage: React.FC = () => {
     }) => matchAPI.startMatch(data.matchId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
-      
+
       // Redirect to scoring page
       if (matchId) {
         const scoringRoute = getRouteWithMatchId(MATCH_STATUS.LIVE, matchId);
@@ -94,13 +96,16 @@ export const OpeningPlayersPage: React.FC = () => {
                 Select Opening Players
               </h1>
               <p className="text-sm text-gray-600 mb-8">
-                Choose the opening batsmen (striker & non-striker) and opening bowler to start the match.
+                Choose the opening batsmen (striker & non-striker) and opening
+                bowler to start the match.
               </p>
 
               <div className="space-y-8">
                 {/* Team A Batsmen */}
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Team A - Opening Batsmen</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Team A - Opening Batsmen
+                  </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Striker Selection */}
                     <div>
@@ -133,9 +138,14 @@ export const OpeningPlayersPage: React.FC = () => {
                       >
                         <option value="">Select non-striker...</option>
                         {teamAPlayers
-                          .filter((p: MatchPlayer) => p.playerId !== selectedStriker)
+                          .filter(
+                            (p: MatchPlayer) => p.playerId !== selectedStriker,
+                          )
                           .map((player: MatchPlayer) => (
-                            <option key={player.playerId} value={player.playerId}>
+                            <option
+                              key={player.playerId}
+                              value={player.playerId}
+                            >
                               {player.player.name}
                             </option>
                           ))}
@@ -146,7 +156,9 @@ export const OpeningPlayersPage: React.FC = () => {
 
                 {/* Team B Bowler */}
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">Team B - Opening Bowler</h2>
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Team B - Opening Bowler
+                  </h2>
                   <div className="max-w-md">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Opening Bowler *
@@ -178,7 +190,9 @@ export const OpeningPlayersPage: React.FC = () => {
                     }
                     className="px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >
-                    {startMatchMutation.isPending ? "Starting Match..." : "Start Match"}
+                    {startMatchMutation.isPending
+                      ? "Starting Match..."
+                      : "Start Match"}
                   </button>
                 </div>
               </div>
