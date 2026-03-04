@@ -4,25 +4,32 @@ import { accessCodeAPI } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
 import { getRouteWithMatchId, MatchStatus } from '../lib/enums';
 
-export const AccessCodePage: React.FC = () => {
+interface AccessCodePageProps {
+  matchId?: string;
+  onCodeValidated?: (matchData: any) => void;
+}
+
+export const AccessCodePage: React.FC<AccessCodePageProps> = ({ matchId: propMatchId, onCodeValidated }) => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    matchId: '',
+    matchId: propMatchId || '',
     code: '',
   });
 
   // Load matchId from localStorage on component mount
   useEffect(() => {
-    const storedMatch = localStorage.getItem('currentMatch');
-    if (storedMatch) {
-      const matchData = JSON.parse(storedMatch);
-      setFormData(prev => ({
-        ...prev,
-        matchId: matchData.matchId || ''
-      }));
+    if (!propMatchId) {
+      const storedMatch = localStorage.getItem('currentMatch');
+      if (storedMatch) {
+        const matchData = JSON.parse(storedMatch);
+        setFormData(prev => ({
+          ...prev,
+          matchId: matchData.matchId || ''
+        }));
+      }
     }
-  }, []);
+  }, [propMatchId]);
 
   const validateCodeMutation = useMutation({
     mutationFn: ({ matchId, code }: { matchId: string; code: string }) => 
@@ -31,10 +38,15 @@ export const AccessCodePage: React.FC = () => {
       // Store match info in localStorage for later use
       localStorage.setItem('currentMatch', JSON.stringify(data));
       
-      // Redirect based on match status using enum-based routing with matchId
-      const matchStatus = data.status as MatchStatus;
-      const targetRoute = getRouteWithMatchId(matchStatus, data.matchId);
-      navigate(targetRoute);
+      // Use custom callback if provided, otherwise use default navigation
+      if (onCodeValidated) {
+        onCodeValidated(data);
+      } else {
+        // Redirect based on match status using enum-based routing with matchId
+        const matchStatus = data.status as MatchStatus;
+        const targetRoute = getRouteWithMatchId(matchStatus, data.matchId);
+        navigate(targetRoute);
+      }
     },
     onError: (error: any) => {
       alert(`Invalid or expired code: ${error.message}`);

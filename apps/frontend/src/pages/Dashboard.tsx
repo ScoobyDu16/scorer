@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardStats } from '../components/DashboardStats';
 
@@ -49,14 +50,14 @@ export const Dashboard: React.FC = () => {
                   Create Match
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Start a new cricket match
+                  Start a new cricket match with unified flow
                 </p>
-                <a
-                  href="/create-match"
+                <Link
+                  to="/match-flow"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
                 >
                   Create Match
-                </a>
+                </Link>
               </div>
               <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -65,12 +66,12 @@ export const Dashboard: React.FC = () => {
                 <p className="text-gray-600 mb-4">
                   Generate access codes for upcoming matches
                 </p>
-                <a
-                  href="/generate-code"
+                <Link
+                  to="/generate-code"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
                 >
                   Generate Code
-                </a>
+                </Link>
               </div>
               <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -79,12 +80,12 @@ export const Dashboard: React.FC = () => {
                 <p className="text-gray-600 mb-4">
                   Add, edit, and manage player profiles
                 </p>
-                <a
-                  href="/players"
+                <Link
+                  to="/players"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
                 >
                   Manage Players
-                </a>
+                </Link>
               </div>
             </div>
           </div>

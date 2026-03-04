@@ -11,6 +11,7 @@ import { AccessCodePage } from './pages/AccessCodePage';
 import { MatchSetupPage } from './pages/MatchSetupPage';
 import { OpeningPlayersPage } from './pages/OpeningPlayersPage';
 import { ScoringPage } from './pages/ScoringPage';
+import { MatchFlow } from './components/MatchFlow';
 
 function App() {
   return (
@@ -38,6 +39,9 @@ function App() {
                 <Route path="/match-setup/:matchId" element={<MatchSetupPage />} />
                 <Route path="/opening/:matchId" element={<OpeningPlayersPage />} />
                 <Route path="/scoring/:matchId" element={<ScoringPage />} />
+                
+                {/* Unified Match Flow - handles all match lifecycle steps */}
+                <Route path="/match-flow/:matchId?" element={<MatchFlow />} />
               </Routes>
             </ProtectedRoute>
           }

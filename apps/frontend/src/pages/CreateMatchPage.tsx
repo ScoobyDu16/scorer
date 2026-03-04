@@ -3,7 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { matchAPI } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
 
-export const CreateMatchPage: React.FC = () => {
+interface CreateMatchPageProps {
+  onMatchCreated?: (matchId: string) => void;
+}
+
+export const CreateMatchPage: React.FC<CreateMatchPageProps> = ({ onMatchCreated }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -27,7 +31,13 @@ export const CreateMatchPage: React.FC = () => {
         playersPerTeam: formData.playersPerTeam || 11,
       };
       localStorage.setItem("currentMatch", JSON.stringify(matchDataForSetup));
-      navigate("/access-code");
+      
+      // Use custom callback if provided, otherwise use default navigation
+      if (onMatchCreated) {
+        onMatchCreated(data.id);
+      } else {
+        navigate("/access-code");
+      }
     },
     onError: (error: any) => {
       alert(`Error creating match: ${error.message}`);
