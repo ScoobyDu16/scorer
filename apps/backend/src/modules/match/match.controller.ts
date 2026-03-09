@@ -6,14 +6,62 @@ import {
   addMatchPlayersService,
   changeBowlerService,
   createMatchService,
+  deleteMatchService,
   endInningsService,
+  getCreatedMatchesService,
   getMatchScoreService,
   getMatchPlayersService,
   getMatchesService,
+  getMatchService,
   startInningsService,
   startSecondInningsService,
   undoLastBallService,
 } from "./match.service";
+
+export const deleteMatch = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    
+    businessLogger.deleted('match', `match-id ${matchId}`);
+    
+    // Check if match exists
+    const match = await getMatchService(matchId);
+    if (!match) {
+      return res.status(404).json({ message: "Match not found" });
+    }
+    
+    // TODO: Add business logic validation
+    // - Check if match is in a state that allows deletion
+    // - Clean up related data (innings, balls, etc.)
+    
+    // For now, proceed with deletion
+    await deleteMatchService(matchId);
+    
+    businessLogger.success('match deleted', { matchId });
+    
+    res.json({ message: "Match deleted successfully" });
+  } catch (error: any) {
+    businessLogger.error('deleting match', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMatch = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+    
+    businessLogger.fetching('match', `match-id ${matchId}`);
+    
+    const match = await getMatchService(matchId);
+    
+    businessLogger.found('match', match, { matchId });
+    
+    res.json(match);
+  } catch (error: any) {
+    businessLogger.error('fetching match', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const getMatchScore = async (req: AuthRequest, res: Response) => {
   try {
@@ -34,7 +82,11 @@ export const getMatchScore = async (req: AuthRequest, res: Response) => {
 
 export const getMatches = async (req: AuthRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.turfId;
+    
+    if (!turfId) {
+      return res.status(401).json({ message: "Turf ID not found" });
+    }
     
     businessLogger.fetching('matches', `turf-id ${turfId}`);
     
@@ -45,6 +97,27 @@ export const getMatches = async (req: AuthRequest, res: Response) => {
     res.json(matches);
   } catch (error: any) {
     businessLogger.error('fetching matches', error, { turfId: req.turfId });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getCreatedMatches = async (req: AuthRequest, res: Response) => {
+  try {
+    const turfId = req.turfId;
+    
+    if (!turfId) {
+      return res.status(401).json({ message: "Turf ID not found" });
+    }
+    
+    businessLogger.fetching('created matches', `turf-id ${turfId}`);
+    
+    const matches = await getCreatedMatchesService(turfId);
+    
+    businessLogger.found('created matches', matches, { turfId });
+    
+    res.json(matches);
+  } catch (error: any) {
+    businessLogger.error('fetching created matches', error, { turfId: req.turfId });
     res.status(500).json({ message: error.message });
   }
 };

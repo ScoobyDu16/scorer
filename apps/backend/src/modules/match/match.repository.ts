@@ -109,6 +109,10 @@ export const deleteBallRepo = async (ballId: string) => {
   await db.delete(balls).where(eq(balls.id, ballId));
 };
 
+export const deleteMatchRepo = async (matchId: string) => {
+  await db.delete(matches).where(eq(matches.id, matchId));
+};
+
 export const revertInningsTotalsRepo = async (
   inningsId: string,
   runsToSubtract: number,

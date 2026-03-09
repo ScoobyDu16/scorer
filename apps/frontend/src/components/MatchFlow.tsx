@@ -156,15 +156,7 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
         ) : null;
 
       case "MATCH_SETUP":
-        return matchId ? (
-          <MatchSetupPage 
-            matchId={matchId}
-            onPlayersAdded={() => {
-              // Trigger re-fetch to update step based on new match status
-              window.location.reload();
-            }}
-          />
-        ) : null;
+        return matchId ? <MatchSetupPage /> : null;
 
       case "PLAYERS_ADDED":
         return matchId ? <PlayersPage /> : null;

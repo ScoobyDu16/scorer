@@ -12,6 +12,7 @@ import { MatchSetupPage } from './pages/MatchSetupPage';
 import { OpeningPlayersPage } from './pages/OpeningPlayersPage';
 import { ScoringPage } from './pages/ScoringPage';
 import { MatchFlow } from './components/MatchFlow';
+import { MatchManagementPage } from './pages/MatchManagementPage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/match-setup/:matchId" element={<MatchSetupPage />} />
                 <Route path="/opening/:matchId" element={<OpeningPlayersPage />} />
                 <Route path="/scoring/:matchId" element={<ScoringPage />} />
+                <Route path="/match-management" element={<MatchManagementPage turfId="current" />} />
                 
                 {/* Unified Match Flow - handles all match lifecycle steps */}
                 <Route path="/match-flow/:matchId?" element={<MatchFlow />} />

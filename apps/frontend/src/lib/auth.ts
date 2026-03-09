@@ -113,6 +113,11 @@ export const matchAPI = {
     return response.data;
   },
 
+  getCreatedMatches: async (): Promise<Match[]> => {
+    const response = await api.get("/matches/created");
+    return response.data;
+  },
+
   getMatch: async (matchId: string): Promise<Match> => {
     const response = await api.get(`/matches/${matchId}`);
     return response.data;
@@ -207,6 +212,10 @@ export const matchAPI = {
       newBowlerId,
     });
     return response.data;
+  },
+
+  deleteMatch: async (matchId: string): Promise<void> => {
+    await api.delete(`/matches/${matchId}`);
   },
 };
 

@@ -1,5 +1,5 @@
 import { ballsToOvers, calculateRunRate } from "../../utils/cricket";
-import { hasUsedAccessCodeForMatchRepo } from "../access-code/access-code.repository";
+import { hasUsedAccessCodeForMatchRepo, getMatchesWithActiveCodesRepo } from "../access-code/access-code.repository";
 import { getLastBallsRepo } from "../ball/balls.repository";
 import { matchServiceLogger } from "../../utils/business-logger";
 import {
@@ -18,6 +18,7 @@ import {
   createInningsRepo,
   createMatchRepo,
   deleteBallRepo,
+  deleteMatchRepo,
   getCurrentInningsRepo,
   getInningsByIdRepo,
   getLastBallRepo,
@@ -67,7 +68,28 @@ export const createMatchService = async (turfId: string, data: any) => {
 
 export const getMatchesService = async (turfId: string) => {
   const allMatches = await getMatchesByTurfRepo(turfId);
-  return getMatchesWithoutActiveCodesService(allMatches);
+  return allMatches; // Return all matches for Match Management page
+};
+
+export const getCreatedMatchesService = async (turfId: string) => {
+  const allMatches = await getMatchesByTurfRepo(turfId);
+  // Filter only CREATED status matches for generate code page
+  // Also filter out matches that have active access codes
+  const matchesWithActiveCodes = await getMatchesWithActiveCodesRepo(allMatches.map(m => m.id));
+  const activeCodeMatchIds = new Set(matchesWithActiveCodes);
+  
+  return allMatches.filter((match: any) => 
+    match.status === MATCH_STATUS.CREATED && !activeCodeMatchIds.has(match.id)
+  );
+};
+
+export const getMatchService = async (matchId: string) => {
+  const match = await getMatchByIdRepo(matchId);
+  return match;
+};
+
+export const deleteMatchService = async (matchId: string) => {
+  await deleteMatchRepo(matchId);
 };
 
 export const addMatchPlayersService = async (

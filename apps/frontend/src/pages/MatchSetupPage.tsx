@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { playerAPI } from "../lib/auth";
 import { matchAPI } from "../lib/auth";
 import { getRouteWithMatchId, MATCH_STATUS } from "../lib/enums";
-
-interface MatchSetupPageProps {
-  matchId: string;
-  onPlayersAdded?: () => void;
-}
 
 interface Player {
   id: string;
@@ -24,7 +19,8 @@ interface MatchSetupData {
   playersPerTeam: number;
 }
 
-export const MatchSetupPage: React.FC<MatchSetupPageProps> = ({ matchId, onPlayersAdded }) => {
+export const MatchSetupPage: React.FC = () => {
+  const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -138,11 +134,8 @@ export const MatchSetupPage: React.FC<MatchSetupPageProps> = ({ matchId, onPlaye
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
       
-      // Use custom callback if provided, otherwise use default navigation
-      if (onPlayersAdded) {
-        onPlayersAdded();
-      } else {
-        // Redirect to opening players selection page
+      // Redirect to opening players selection page
+      if (matchId) {
         const openingRoute = getRouteWithMatchId(MATCH_STATUS.PLAYERS_ADDED, matchId);
         navigate(openingRoute);
       }

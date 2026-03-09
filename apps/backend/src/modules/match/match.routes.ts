@@ -4,7 +4,10 @@ import {
   addBall,
   addMatchPlayers,
   createMatch,
+  deleteMatch,
   endInnings,
+  getCreatedMatches,
+  getMatch,
   getMatchPlayers,
   getMatchScore,
   getMatches,
@@ -17,6 +20,15 @@ const router = Router();
 
 // Get all matches for turf
 router.get("/", authMiddleware, getMatches);
+
+// Get created matches for generate code page
+router.get("/created", authMiddleware, getCreatedMatches);
+
+// Get single match details
+router.get("/:matchId", authMiddleware, getMatch);
+
+// Delete match
+router.delete("/:matchId", authMiddleware, deleteMatch);
 
 // Owner creates match
 router.post("/", authMiddleware, createMatch);

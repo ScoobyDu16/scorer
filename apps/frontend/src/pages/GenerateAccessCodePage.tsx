@@ -13,7 +13,7 @@ export const GenerateAccessCodePage: React.FC = () => {
   // Fetch upcoming matches
   const { data: matches, isLoading } = useQuery({
     queryKey: ['matches'],
-    queryFn: matchAPI.getMatches,
+    queryFn: matchAPI.getCreatedMatches,
   });
 
   // Filter matches ready for access code generation
