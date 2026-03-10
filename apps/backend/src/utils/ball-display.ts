@@ -10,23 +10,22 @@ export type BallDisplayInput = {
 };
 
 /**
- * Format a single ball
+ * Format a single ball event
  */
 export const formatBallDisplay = (ball: BallDisplayInput): string => {
-  // Wicket takes highest priority
   if (ball.isWicket) return "W";
 
   switch (ball.extraType) {
     case "WIDE": {
-      // extraRuns includes base 1
+      // extraRuns includes base wide run
       const additional = ball.extraRuns - 1;
       return additional > 0 ? `WD+${additional}` : "WD";
     }
 
     case "NO_BALL": {
-      // Additional runs come from bat (runs)
-      const additional = ball.runs;
-      return additional > 0 ? `NB+${additional}` : "NB";
+      // NB always gives 1 run + bat runs
+      const batRuns = ball.runs || 0;
+      return batRuns > 0 ? `NB+${batRuns}` : "NB";
     }
 
     case "BYE":
@@ -36,16 +35,18 @@ export const formatBallDisplay = (ball: BallDisplayInput): string => {
       return `${ball.extraRuns}LB`;
 
     default:
-      // Normal delivery
       return String(ball.runs);
   }
 };
 
 /**
- * Format recent balls:
- * - Oldest on left
- * - Newest on right
- * - Add "|" after every completed over (6 legal balls)
+ * Format recent balls
+ *
+ * Rules:
+ * - Oldest → left
+ * - Newest → right
+ * - Max 12 balls
+ * - "|" added only after 6 legal deliveries
  */
 export const formatRecentBalls = (
   balls: BallDisplayInput[],
@@ -54,44 +55,37 @@ export const formatRecentBalls = (
     return { formatted: [] };
   }
 
-  // DB gives newest first → reverse
-  const sorted = [...balls].reverse();
+  // DB returns newest first → reverse
+  const chronological = [...balls].reverse();
 
-  const result: string[] = [];
+  // Limit to last 12 balls (production rule)
+  const limited = chronological.slice(-12);
 
-  let currentOver = sorted[0].overNumber;
-  let legalCount = 0;
+  const formatted: string[] = [];
 
-  for (const ball of sorted) {
-    // If over changed → separator
-    if (ball.overNumber !== currentOver) {
-      result.push("|");
-      currentOver = ball.overNumber;
-      legalCount = 0;
-    }
+  let legalCounter = 0;
 
-    result.push(formatBallDisplay(ball));
+  for (let i = 0; i < limited.length; i++) {
+    const ball = limited[i];
 
-    // Count only legal deliveries
+    formatted.push(formatBallDisplay(ball));
+
     if (ball.isLegalDelivery) {
-      legalCount++;
+      legalCounter++;
+    }
 
-      // Over completed after 6 legal balls
-      if (legalCount === 6) {
-        // Only add separator if there are more balls in the next over
-        const hasMoreBallsInNextOver = sorted.some(b => b.overNumber > currentOver);
-        if (hasMoreBallsInNextOver) {
-          result.push("|");
-        }
-        legalCount = 0;
-      }
+    const nextBall = limited[i + 1];
+
+    /**
+     * Insert over separator only when:
+     * - 6 legal deliveries completed
+     * - next ball exists
+     */
+    if (legalCounter === 6 && nextBall) {
+      formatted.push("|");
+      legalCounter = 0;
     }
   }
 
-  // Remove trailing "|"
-  if (result[result.length - 1] === "|") {
-    result.pop();
-  }
-
-  return { formatted: result };
+  return { formatted };
 };

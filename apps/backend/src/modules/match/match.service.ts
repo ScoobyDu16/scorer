@@ -1329,17 +1329,16 @@ const buildLiveScoreDetails = async (inningsId: string) => {
 
     /**
      * 3️⃣ Over completion logic
-     * Check if the most recent over has 6 legal deliveries
+     * Production-grade: Use innings.totalBalls % 6 === 0
+     * totalBalls only increments for legal deliveries
      */
-    const latestOverNumber = Math.max(
-      ...normalizedBalls.map((b) => b.overNumber),
-    );
+    isOverCompleted = innings.totalBalls > 0 && innings.totalBalls % 6 === 0;
 
-    const legalBallsInLatestOver = normalizedBalls.filter(
-      (b) => b.overNumber === latestOverNumber && b.isLegalDelivery,
-    ).length;
-
-    isOverCompleted = legalBallsInLatestOver >= 6;
+    // Debug logging (can be removed in production)
+    console.log("=== DEBUG: Over Completion Logic ===");
+    console.log("Innings Total Balls (legal only):", innings.totalBalls);
+    console.log("Is Over Completed:", isOverCompleted);
+    console.log("Recent Balls:", recentBalls);
   }
 
   /**
