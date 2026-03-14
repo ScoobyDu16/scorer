@@ -25,12 +25,46 @@ export const MatchSetupPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([]);
   const [teamBPlayers, setTeamBPlayers] = useState<Player[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<"A" | "B">("A");
 
+  const { data: matchDetails } = useQuery({
+    queryKey: ["match", matchId],
+    queryFn: () => {
+      if (!matchId) return null;
+      return matchAPI.getMatch(matchId);
+    },
+    enabled: !!matchId,
+  });
+
   // Get match info from localStorage
   const [matchData, setMatchData] = useState<MatchSetupData | null>(null);
+
+  const teamAName =
+    (matchDetails as any)?.teamAName ||
+    (() => {
+      try {
+        const stored = localStorage.getItem("currentMatch");
+        const parsed = stored ? JSON.parse(stored) : null;
+        return parsed?.match?.teamAName;
+      } catch {
+        return undefined;
+      }
+    })();
+
+  const teamBName =
+    (matchDetails as any)?.teamBName ||
+    (() => {
+      try {
+        const stored = localStorage.getItem("currentMatch");
+        const parsed = stored ? JSON.parse(stored) : null;
+        return parsed?.match?.teamBName;
+      } catch {
+        return undefined;
+      }
+    })();
 
   useEffect(() => {
     const storedMatch = localStorage.getItem("currentMatch");
@@ -60,9 +94,23 @@ export const MatchSetupPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const { data: playersData, isLoading, isFetching } = useQuery({
-    queryKey: ["players", searchTerm, currentPage],
-    queryFn: () => playerAPI.getPlayers(searchTerm, currentPage, 20, "name", "asc"),
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const {
+    data: playersData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: ["players", debouncedSearchTerm, currentPage],
+    queryFn: () =>
+      playerAPI.getPlayers(debouncedSearchTerm, currentPage, 20, "name", "asc"),
     enabled: true,
   });
 
@@ -74,7 +122,7 @@ export const MatchSetupPage: React.FC = () => {
         setAllPlayers(playersData.players);
       } else {
         // Subsequent pages - append players
-        setAllPlayers(prev => [...prev, ...playersData.players]);
+        setAllPlayers((prev) => [...prev, ...playersData.players]);
       }
       setHasMore(playersData.pagination.hasNext);
       setIsLoadingMore(false);
@@ -98,13 +146,15 @@ export const MatchSetupPage: React.FC = () => {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Infinite scroll handler
-  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null);
+  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(
+    null,
+  );
   const [previousScrollHeight, setPreviousScrollHeight] = useState(0);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
     setScrollContainer(element);
-    
+
     if (
       element.scrollHeight - element.scrollTop <= element.clientHeight + 50 &&
       hasMore &&
@@ -113,14 +163,16 @@ export const MatchSetupPage: React.FC = () => {
     ) {
       setPreviousScrollHeight(element.scrollHeight);
       setIsLoadingMore(true);
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage((prev) => prev + 1);
     }
   };
 
   // Preserve scroll position when new players are added
   useEffect(() => {
     if (scrollContainer && playersData && currentPage > 1) {
-      const newScrollTop = scrollContainer.scrollTop + (scrollContainer.scrollHeight - previousScrollHeight);
+      const newScrollTop =
+        scrollContainer.scrollTop +
+        (scrollContainer.scrollHeight - previousScrollHeight);
       scrollContainer.scrollTop = newScrollTop;
     }
   }, [allPlayers, currentPage, scrollContainer, previousScrollHeight]);
@@ -133,10 +185,13 @@ export const MatchSetupPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
-      
+
       // Redirect to opening players selection page
       if (matchId) {
-        const openingRoute = getRouteWithMatchId(MATCH_STATUS.PLAYERS_ADDED, matchId);
+        const openingRoute = getRouteWithMatchId(
+          MATCH_STATUS.PLAYERS_ADDED,
+          matchId,
+        );
         navigate(openingRoute);
       }
     },
@@ -228,7 +283,7 @@ export const MatchSetupPage: React.FC = () => {
                           : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                       }`}
                     >
-                      Team A ({teamAPlayers.length}/
+                      {teamAName || "Team A"} ({teamAPlayers.length}/
                       {matchData?.playersPerTeam || 11})
                     </button>
                     <button
@@ -239,7 +294,7 @@ export const MatchSetupPage: React.FC = () => {
                           : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                       }`}
                     >
-                      Team B ({teamBPlayers.length}/
+                      {teamBName || "Team B"} ({teamBPlayers.length}/
                       {matchData?.playersPerTeam || 11})
                     </button>
                   </nav>
@@ -251,7 +306,7 @@ export const MatchSetupPage: React.FC = () => {
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Available Players
                 </h3>
-                <div 
+                <div
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-64 overflow-y-auto"
                   onScroll={handleScroll}
                 >
@@ -291,7 +346,9 @@ export const MatchSetupPage: React.FC = () => {
                 {isLoadingMore && (
                   <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500 mx-auto"></div>
-                    <p className="text-sm text-gray-500 mt-2">Loading more players...</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Loading more players...
+                    </p>
                   </div>
                 )}
                 {!hasMore && availablePlayers.length > 0 && (
@@ -305,8 +362,8 @@ export const MatchSetupPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Team A */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Team A Players
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">
+                    {teamAName} Players
                   </h3>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {teamAPlayers.map((player) => (
@@ -354,8 +411,8 @@ export const MatchSetupPage: React.FC = () => {
 
                 {/* Team B */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Team B Players
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 text-center">
+                    {teamBName} Players
                   </h3>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {teamBPlayers.map((player) => (
@@ -413,7 +470,9 @@ export const MatchSetupPage: React.FC = () => {
                 <div className="flex justify-end space-x-4">
                   <button
                     onClick={handleSubmitPlayers}
-                    disabled={!isSetupComplete() || addPlayersMutation.isPending}
+                    disabled={
+                      !isSetupComplete() || addPlayersMutation.isPending
+                    }
                     className="px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
                   >
                     {addPlayersMutation.isPending

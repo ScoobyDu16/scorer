@@ -9,6 +9,7 @@ export const GenerateAccessCodePage: React.FC = () => {
   const [selectedMatchId, setSelectedMatchId] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Fetch upcoming matches
   const { data: matches, isLoading } = useQuery({
@@ -47,7 +48,12 @@ export const GenerateAccessCodePage: React.FC = () => {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedCode);
-    alert('Code copied to clipboard!');
+    setIsCopied(true);
+    
+    // Reset after 3 seconds
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 3000);
   };
 
   return (
@@ -117,6 +123,16 @@ export const GenerateAccessCodePage: React.FC = () => {
       {showCodeModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            {/* Close button in top-right corner */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
             <div className="mt-3 text-center">
               <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
                 <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,18 +154,18 @@ export const GenerateAccessCodePage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-6 flex justify-center gap-3">
+            
+            <div className="mt-6 flex justify-center">
               <button
                 onClick={copyToClipboard}
-                className="px-4 py-2 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md"
+                disabled={isCopied}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  isCopied 
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                    : 'text-green-700 bg-green-100 hover:bg-green-200'
+                }`}
               >
-                Copy Code
-              </button>
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
-                Done
+                {isCopied ? 'Copied!' : 'Copy Code'}
               </button>
             </div>
           </div>

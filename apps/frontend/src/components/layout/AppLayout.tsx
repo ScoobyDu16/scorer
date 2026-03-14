@@ -10,7 +10,8 @@ import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   BellIcon,
-  PlusIcon
+  PlusIcon,
+  QrCodeIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -53,6 +54,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, actions }
       label: 'Players',
       icon: UsersIcon,
       href: '/players',
+    },
+    {
+      id: 'generate-code',
+      label: 'Generate Code',
+      icon: QrCodeIcon,
+      href: '/generate-code',
     },
     {
       id: 'settings',
