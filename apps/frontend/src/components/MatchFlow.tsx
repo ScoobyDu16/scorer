@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { matchAPI } from "../lib/auth";
 import { MATCH_STATUS } from "../lib/enums";
-import { ScoringPage } from "../pages/ScoringPage";
 import { CreateMatchPage } from "../pages/CreateMatchPage";
 import { AccessCodePage } from "../pages/AccessCodePage";
-import { MatchSetupPage } from "../pages/MatchSetupPage";
-import { PlayersPage } from "../pages/PlayersPage";
+import { AddMatchPlayersPage } from "../pages/MatchSetupPage";
 import { OpeningPlayersPage } from "../pages/OpeningPlayersPage";
 
 interface MatchFlowProps {
@@ -17,6 +15,7 @@ interface MatchFlowProps {
 export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [currentStep, setCurrentStep] = useState<string>("CREATE_MATCH");
 
@@ -33,44 +32,15 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
   // Update current step based on match status
   useEffect(() => {
     if (match) {
-      // Determine exact step based on match status and innings data
       if (match.status === MATCH_STATUS.CREATED) {
         setCurrentStep("ACCESS_CODE");
       } else if (match.status === MATCH_STATUS.ACCESS_VERIFIED) {
-        setCurrentStep("MATCH_SETUP");
+        setCurrentStep("ADD_MATCH_PLAYERS");
       } else if (match.status === MATCH_STATUS.PLAYERS_ADDED) {
         setCurrentStep("OPENING_PLAYERS");
       } else if (match.status === MATCH_STATUS.LIVE) {
-        // Check if we have innings data to determine sub-step
-        if (!match.innings || match.innings.length === 0) {
-          setCurrentStep("OPENING_PLAYERS");
-        } else {
-          const firstInnings = match.innings.find(
-            (i: any) => i.inningsNumber === 1,
-          );
-          const secondInnings = match.innings.find(
-            (i: any) => i.inningsNumber === 2,
-          );
-
-          if (!firstInnings) {
-            setCurrentStep("OPENING_PLAYERS");
-          } else if (firstInnings.status === "COMPLETED" && !secondInnings) {
-            setCurrentStep("INNINGS_BREAK");
-          } else if (
-            firstInnings.status === "COMPLETED" &&
-            secondInnings &&
-            secondInnings.status === "COMPLETED"
-          ) {
-            setCurrentStep("MATCH_COMPLETED");
-          } else if (secondInnings && secondInnings.status === "LIVE") {
-            setCurrentStep("SECOND_INNINGS_SCORING");
-          } else if (firstInnings.status === "LIVE") {
-            setCurrentStep("FIRST_INNINGS_SCORING");
-          } else if (secondInnings && secondInnings.status === "UPCOMING") {
-            setCurrentStep("SECOND_INNINGS_OPENING");
-          } else {
-            setCurrentStep("FIRST_INNINGS_SCORING");
-          }
+        if (matchId) {
+          navigate(`/scoring/${matchId}`, { replace: true });
         }
       } else if (match.status === MATCH_STATUS.COMPLETED) {
         setCurrentStep("MATCH_COMPLETED");
@@ -79,7 +49,7 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
       // No match exists, we're in creation step
       setCurrentStep("CREATE_MATCH");
     }
-  }, [match]);
+  }, [match, matchId, navigate]);
 
   const steps = [
     {
@@ -93,13 +63,8 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
       description: "Enter and validate access code",
     },
     {
-      id: "MATCH_SETUP",
-      name: "Match Setup",
-      description: "Configure teams and toss",
-    },
-    {
-      id: "PLAYERS_ADDED",
-      name: "Add Players",
+      id: "ADD_MATCH_PLAYERS",
+      name: "Add Match Players",
       description: "Add players to both teams",
     },
     {
@@ -113,8 +78,7 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
     const statusOrder = [
       "CREATE_MATCH",
       "ACCESS_CODE",
-      "MATCH_SETUP",
-      "PLAYERS_ADDED",
+      "ADD_MATCH_PLAYERS",
       "OPENING_PLAYERS",
     ];
 
@@ -132,14 +96,8 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
         return (
           <CreateMatchPage
             onMatchCreated={(newMatchId: string) => {
-              // Update URL to include matchId without navigation
-              window.history.replaceState(
-                null,
-                "",
-                `/match-flow/${newMatchId}`,
-              );
-              // Trigger re-fetch of match data
-              window.location.reload();
+              navigate(`/match-flow/${newMatchId}`, { replace: true });
+              queryClient.invalidateQueries({ queryKey: ["match", newMatchId] });
             }}
           />
         );
@@ -149,33 +107,16 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
           <AccessCodePage
             matchId={matchId}
             onCodeValidated={() => {
-              // Trigger re-fetch to update step based on new match status
-              window.location.reload();
+              queryClient.invalidateQueries({ queryKey: ["match", matchId] });
             }}
           />
         ) : null;
 
-      case "MATCH_SETUP":
-        return matchId ? <MatchSetupPage /> : null;
-
-      case "PLAYERS_ADDED":
-        return matchId ? <PlayersPage /> : null;
+      case "ADD_MATCH_PLAYERS":
+        return matchId ? <AddMatchPlayersPage /> : null;
 
       case "OPENING_PLAYERS":
         return matchId ? <OpeningPlayersPage /> : null;
-
-      // Post-stepper flow - render actual pages based on match status
-      case "FIRST_INNINGS_SCORING":
-        return <ScoringPage />;
-
-      case "INNINGS_BREAK":
-        return <ScoringPage />;
-
-      case "SECOND_INNINGS_OPENING":
-        return <ScoringPage />;
-
-      case "SECOND_INNINGS_SCORING":
-        return <ScoringPage />;
 
       case "MATCH_COMPLETED":
         return (
@@ -217,8 +158,7 @@ export const MatchFlow: React.FC<MatchFlowProps> = ({ className = "" }) => {
   const shouldShowStepper = [
     "CREATE_MATCH",
     "ACCESS_CODE",
-    "MATCH_SETUP",
-    "PLAYERS_ADDED",
+    "ADD_MATCH_PLAYERS",
     "OPENING_PLAYERS",
   ].includes(currentStep);
 
