@@ -169,6 +169,13 @@
       "when": 1772040171237,
       "tag": "0023_wandering_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1773465670303,
+      "tag": "0024_perfect_magma",
+      "breakpoints": true
     }
   ]
 }

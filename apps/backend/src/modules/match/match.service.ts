@@ -8,6 +8,8 @@ import {
   getPlayersByIdsRepo,
   updateBattingStatsRepo,
   updateBowlingStatsRepo,
+  revertBattingStatsRepo,
+  revertBowlingStatsRepo,
   updateMaidensRepo,
   upsertPlayerMatchStatsRepo,
   getNextBattingOrderRepo,
@@ -28,6 +30,7 @@ import {
   getMatchWithInningsRepo,
   getMatchesByTurfRepo,
   revertInningsTotalsRepo,
+  revertInningsExtrasRepo,
   updateInningsCurrentPlayersRepo,
   updateInningsOpeningPlayersRepo,
   updateInningsExtrasRepo,
@@ -340,6 +343,7 @@ export const startInningsService = async (
     battingTeam,
     openingStrikerId: openingPlayers?.strikerId,
     openingNonStrikerId: openingPlayers?.nonStrikerId,
+    openingBowlerId: openingPlayers?.bowlerId,
     currentStrikerId: openingPlayers?.strikerId,
     currentNonStrikerId: openingPlayers?.nonStrikerId,
     currentBowlerId: openingPlayers?.bowlerId,
@@ -690,26 +694,160 @@ export const addBallService = async (matchId: string, data: any) => {
 };
 
 export const undoLastBallService = async (matchId: string) => {
-  const ball = await getLastBallRepo(matchId);
-
-  if (!ball) {
-    throw new Error("No balls to undo");
+  // 1️⃣ Get current innings from match
+  const match = await getMatchByIdRepo(matchId);
+  if (!match) {
+    throw new Error("Match not found");
   }
 
-  const totalRuns = (ball.runs || 0) + (ball.extraRuns || 0);
+  const currentInningsNumber = match.currentInnings;
+  const currentInnings = await getCurrentInningsRepo(matchId, currentInningsNumber);
+  if (!currentInnings) {
+    throw new Error("Current innings not found");
+  }
 
-  // Delete ball
-  await deleteBallRepo(ball.id);
+  // 2️⃣ Get last ball of current innings (source of truth)
+  const lastBall = await getLastBallsRepo(currentInnings.id, 1);
+  if (!lastBall || lastBall.length === 0) {
+    throw new Error("No balls to undo");
+  }
+  const ballToDelete = lastBall[0];
 
-  // Revert innings totals
+  // 3️⃣ Start database transaction
+  // Note: In production, wrap all following operations in a proper DB transaction
+  
+  // 4️⃣ Delete the ball from balls table
+  await deleteBallRepo(ballToDelete.id);
+
+  // 5️⃣ Update innings aggregates by subtracting ball's impact
+  const totalRuns = (ballToDelete.runs || 0) + (ballToDelete.extraRuns || 0);
+  const ballsToSubtract = ballToDelete.isLegalDelivery ? 1 : 0;
+  const wicketsToSubtract = ballToDelete.isWicket ? 1 : 0;
+
   await revertInningsTotalsRepo(
-    ball.inningsId,
-    totalRuns,
-    ball.isWicket,
-    ball.isLegalDelivery,
+    currentInnings.id,
+    totalRuns, // Pass positive runs to subtract
+    ballToDelete.isWicket,
+    ballToDelete.isLegalDelivery,
   );
 
-  return ball;
+  // Revert extras based on extra type and runs
+  await revertInningsExtrasRepo(
+    currentInnings.id,
+    ballToDelete.extraType,
+    ballToDelete.extraRuns || 0,
+  );
+
+  // 6️⃣ Revert player_match_stats according to deleted ball event
+  if (ballToDelete.batsmanId) {
+    // Revert batting stats for striker
+    await revertBattingStatsRepo(
+      matchId,
+      ballToDelete.batsmanId,
+      ballToDelete.runs || 0, // Pass runs to subtract
+      ballToDelete.isLegalDelivery, // Pass legality for ball count adjustment
+    );
+  }
+
+  if (ballToDelete.bowlerId) {
+    // Revert bowling stats
+    await revertBowlingStatsRepo(
+      matchId,
+      ballToDelete.bowlerId,
+      totalRuns, // Pass total runs to subtract
+      ballToDelete.isWicket, // Pass wicket flag
+      ballToDelete.isLegalDelivery, // Pass legality for ball count
+    );
+  }
+
+  // 7️⃣ Rebuild live match state by fetching new last ball
+  const newLastBall = await getLastBallsRepo(currentInnings.id, 1);
+  
+  if (!newLastBall || newLastBall.length === 0) {
+    // No balls exist - reset to opening state
+    await updateInningsCurrentPlayersRepo(
+      currentInnings.id,
+      currentInnings.openingStrikerId || '',
+      currentInnings.openingNonStrikerId || '',
+      currentInnings.openingBowlerId || undefined, // Use opening bowler
+    );
+  } else {
+    const remainingBall = newLastBall[0];
+    
+    // Determine correct non-striker by analyzing ball sequence
+    const recentBalls = await getLastBallsRepo(currentInnings.id, 6);
+    let strikerId = currentInnings.openingStrikerId;
+    let nonStrikerId = currentInnings.openingNonStrikerId;
+    
+    // Simulate through all balls to find correct state after remainingBall
+    for (const ball of recentBalls) {
+      if (ball.id === remainingBall.id) {
+        // This is our remaining ball - stop here
+        break;
+      }
+      
+      // Calculate strike rotation for this ball
+      if (ball.batsmanId === strikerId && ball.isLegalDelivery) {
+        if (ball.runs % 2 === 1) {
+          // Odd runs (1, 3, 5) - strike changes
+          [strikerId, nonStrikerId] = [nonStrikerId, strikerId];
+        }
+      }
+      
+      // Update striker for next ball
+      strikerId = ball.batsmanId;
+    }
+    
+    // Recompute striker/non-striker using strike engine with correct non-striker
+    const nextStrike = calculateNextStrike({
+      runs: remainingBall.runs || 0,
+      isLegalDelivery: remainingBall.isLegalDelivery,
+      strikerId: remainingBall.batsmanId,
+      nonStrikerId: nonStrikerId || currentInnings.openingNonStrikerId || '',
+      ballNumber: remainingBall.ballNumber,
+      isWicket: remainingBall.isWicket,
+    });
+
+    await updateInningsCurrentPlayersRepo(
+      currentInnings.id,
+      nextStrike.nextStriker,
+      nextStrike.nextNonStriker,
+      remainingBall.bowlerId,
+    );
+  }
+
+  // 8️⃣ Revert statuses if undone ball had completed over/innings/match
+  const updatedInnings = await getInningsByIdRepo(currentInnings.id);
+  if (updatedInnings) {
+    // Check if innings was completed and should be reopened
+    if (updatedInnings.status === INNINGS_STATUS.COMPLETED) {
+      const ballsInInnings = updatedInnings.totalBalls;
+      const maxBalls = (match.overs || 20) * 6; // Default 20 overs
+      
+      if (ballsInInnings < maxBalls) {
+        // Reopen innings if not actually complete
+        await updateInningsStatusRepo(currentInnings.id, INNINGS_STATUS.LIVE);
+      }
+    }
+  }
+
+  // Check if match was completed and should be reopened
+  if (match.status === MATCH_STATUS.COMPLETED) {
+    const hasRemainingBalls = newLastBall && newLastBall.length > 0;
+    if (hasRemainingBalls) {
+      // Reopen match if balls remain
+      await updateMatchRepo(matchId, {
+        status: MATCH_STATUS.LIVE,
+      });
+    }
+  }
+
+  // 9️⃣ Return comprehensive undo result
+  return {
+    undoneBall: ballToDelete,
+    newLiveState: await buildLiveScoreDetails(currentInnings.id),
+    message: "Last ball undone successfully",
+  };
 };
 
 export const endInningsService = async (matchId: string) => {

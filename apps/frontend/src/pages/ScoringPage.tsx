@@ -70,6 +70,17 @@ export const ScoringPage: React.FC = () => {
     },
   });
 
+  // Undo last ball mutation
+  const undoLastBallMutation = useMutation({
+    mutationFn: (matchId: string) => matchAPI.undoLastBall(matchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["matchScore", matchId] });
+    },
+    onError: (error: any) => {
+      alert(`Error undoing ball: ${error.message}`);
+    },
+  });
+
   // Extract data from match score response
   const currentInnings = matchScore?.innings?.find(
     (i: any) => i.inningsNumber === matchScore?.currentInnings,
@@ -1311,8 +1322,16 @@ export const ScoringPage: React.FC = () => {
                   {/* Action Buttons */}
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200">
-                        Undo Ball
+                      <button 
+                        onClick={() => {
+                          if (window.confirm("Are you sure you want to undo the last ball?")) {
+                            undoLastBallMutation.mutate(matchId!);
+                          }
+                        }}
+                        disabled={undoLastBallMutation.isPending}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200 disabled:opacity-50"
+                      >
+                        {undoLastBallMutation.isPending ? "Undoing..." : "Undo Ball"}
                       </button>
                       <button className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200">
                         Change Strike

@@ -280,6 +280,59 @@ export const updateBowlingStatsRepo = async (
 };
 
 /**
+ * Revert batting stats (for undo operations)
+ */
+export const revertBattingStatsRepo = async (
+  matchId: string,
+  playerId: string,
+  runs: number,
+  isLegalDelivery: boolean,
+) => {
+  const ballsDecrement = isLegalDelivery ? 1 : 0;
+  const fours = runs === 4 ? 1 : 0;
+  const sixes = runs === 6 ? 1 : 0;
+  const dots = isLegalDelivery && runs === 0 ? 1 : 0;
+
+  await db.execute(sql`
+    UPDATE player_match_stats
+    SET
+      runs = GREATEST(0, runs - ${runs}),
+      balls_faced = GREATEST(0, balls_faced - ${ballsDecrement}),
+      dots_faced = GREATEST(0, dots_faced - ${dots}),
+      fours = GREATEST(0, fours - ${fours}),
+      sixes = GREATEST(0, sixes - ${sixes})
+    WHERE match_id = ${matchId}
+      AND player_id = ${playerId}
+  `);
+};
+
+/**
+ * Revert bowling stats (for undo operations)
+ */
+export const revertBowlingStatsRepo = async (
+  matchId: string,
+  playerId: string,
+  totalRuns: number,
+  isWicket: boolean,
+  isLegalDelivery: boolean,
+) => {
+  const ballsDecrement = isLegalDelivery ? 1 : 0;
+  const wickets = isWicket ? 1 : 0;
+  const dots = isLegalDelivery && totalRuns === 0 ? 1 : 0;
+
+  await db.execute(sql`
+    UPDATE player_match_stats
+    SET
+      balls_bowled = GREATEST(0, balls_bowled - ${ballsDecrement}),
+      dots_bowled = GREATEST(0, dots_bowled - ${dots}),
+      runs_conceded = GREATEST(0, runs_conceded - ${totalRuns}),
+      wickets = GREATEST(0, wickets - ${wickets})
+    WHERE match_id = ${matchId}
+      AND player_id = ${playerId}
+  `);
+};
+
+/**
  * Update maidens for bowler (call at end of each over)
  */
 export const updateMaidensRepo = async (matchId: string, playerId: string) => {

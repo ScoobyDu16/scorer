@@ -227,6 +227,7 @@ export const updateInningsOpeningPlayersRepo = async (
     .set({
       openingStrikerId: strikerId,
       openingNonStrikerId: nonStrikerId,
+      openingBowlerId: bowlerId || null,
       currentStrikerId: strikerId,
       currentNonStrikerId: nonStrikerId,
       currentBowlerId: bowlerId || null,

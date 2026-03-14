@@ -214,6 +214,11 @@ export const matchAPI = {
     return response.data;
   },
 
+  undoLastBall: async (matchId: string): Promise<any> => {
+    const response = await api.delete(`/matches/${matchId}/balls/last`);
+    return response.data;
+  },
+
   deleteMatch: async (matchId: string): Promise<void> => {
     await api.delete(`/matches/${matchId}`);
   },
