@@ -14,6 +14,7 @@ import {
   upsertPlayerMatchStatsRepo,
   getNextBattingOrderRepo,
 } from "../player/player.repository";
+import { getWicketBallsByInningsRepo } from "../ball/balls.repository";
 import {
   addMatchPlayersRepo,
   createBallRepo,
@@ -52,6 +53,22 @@ import { calculateNextStrike } from "../../utils/strike.engine";
 import { calculateExtras } from "../../utils/extra.engine";
 import { formatRecentBalls } from "../../utils/ball-display";
 import { validateWicketScenario } from "../wicket/wicket.validation.service";
+
+const getExtrasBreakdownFromInnings = (i: any) => {
+  const wideRuns = i.wideRuns || 0;
+  const noBallRuns = i.noBallRuns || 0;
+  const byeRuns = i.byeRuns || 0;
+  const legByeRuns = i.legByeRuns || 0;
+  const total = wideRuns + noBallRuns + byeRuns + legByeRuns;
+
+  return {
+    wide: wideRuns,
+    noBall: noBallRuns,
+    bye: byeRuns,
+    legBye: legByeRuns,
+    total,
+  };
+};
 
 export const createMatchService = async (turfId: string, data: any) => {
   const match = await createMatchRepo({
@@ -283,6 +300,210 @@ export const startSecondInningsService = async (
   return {
     message: "Second innings started",
     innings: updatedInnings,
+  };
+};
+
+export const getMatchScorecardService = async (matchId: string) => {
+  matchServiceLogger.fetching("match scorecard", matchId);
+
+  const match = await getMatchWithInningsRepo(matchId);
+
+  if (!match) {
+    matchServiceLogger.error(
+      "fetching match scorecard",
+      new Error("Match not found"),
+      { matchId },
+    );
+    throw new Error("Match not found");
+  }
+
+  const matchPlayers = await getMatchPlayersRepo(matchId);
+  const stats = await getMatchPlayerStatsRepo(matchId);
+
+  const allPlayerIds = Array.from(
+    new Set([
+      ...matchPlayers.map((p: any) => p.playerId),
+      ...stats.map((s: any) => s.playerId),
+    ]),
+  );
+  const players = await getPlayersByIdsRepo(allPlayerIds);
+  const playerMap: Record<string, any> = Object.fromEntries(
+    players.map((p: any) => [p.id, p]),
+  );
+
+  const dismissalsByInnings: Record<string, any[]> = {};
+
+  for (const inn of match.innings as any[]) {
+    const wicketBalls = await getWicketBallsByInningsRepo(inn.id);
+
+    dismissalsByInnings[inn.id] = wicketBalls.map((b: any) => {
+      const dismissedId = b.dismissedPlayerId;
+      const bowlerId = b.bowlerId;
+      const fielderId = b.fielderId;
+
+      return {
+        overNumber: b.overNumber,
+        ballNumber: b.ballNumber,
+        batsmanId: dismissedId,
+        batsmanName: dismissedId ? playerMap[dismissedId]?.name : null,
+        wicketType: b.wicketType,
+        bowlerId,
+        bowlerName: bowlerId ? playerMap[bowlerId]?.name : null,
+        fielderId,
+        fielderName: fielderId ? playerMap[fielderId]?.name : null,
+      };
+    });
+  }
+
+  const inningsScorecards = (match.innings as any[])
+    .sort((a, b) => a.inningsNumber - b.inningsNumber)
+    .map((inn) => {
+      const battingTeam = inn.battingTeam;
+      const bowlingTeam = battingTeam === TEAM.A ? TEAM.B : TEAM.A;
+
+      const teamBattingStats = (stats as any[])
+        .filter((s) => s.team === battingTeam)
+        .filter((s) => s.battingOrder !== null && s.battingOrder !== undefined)
+        .sort((a, b) => (a.battingOrder || 0) - (b.battingOrder || 0));
+
+      const teamBowlingStats = (stats as any[])
+        .filter((s) => s.team === bowlingTeam)
+        .filter((s) => (s.ballsBowled || 0) > 0)
+        .sort((a, b) => (b.wickets || 0) - (a.wickets || 0));
+
+      const dismissalMap: Record<string, any> = {};
+      for (const d of dismissalsByInnings[inn.id] || []) {
+        if (d.batsmanId) dismissalMap[d.batsmanId] = d;
+      }
+
+      const battingTable = teamBattingStats.map((s) => {
+        const d = dismissalMap[s.playerId];
+        return {
+          playerId: s.playerId,
+          name: playerMap[s.playerId]?.name,
+          runs: s.runs,
+          balls: s.ballsFaced,
+          fours: s.fours,
+          sixes: s.sixes,
+          dots: s.dotsFaced,
+          out: !!d,
+          dismissal: d
+            ? {
+                wicketType: d.wicketType,
+                bowlerId: d.bowlerId,
+                bowlerName: d.bowlerName,
+                fielderId: d.fielderId,
+                fielderName: d.fielderName,
+                overNumber: d.overNumber,
+                ballNumber: d.ballNumber,
+              }
+            : null,
+        };
+      });
+
+      const bowlingTable = teamBowlingStats.map((s) => ({
+        playerId: s.playerId,
+        name: playerMap[s.playerId]?.name,
+        overs: ballsToOvers(s.ballsBowled || 0),
+        maidens: s.maidens,
+        runsConceded: s.runsConceded,
+        wickets: s.wickets,
+        dotsBowled: s.dotsBowled,
+      }));
+
+      const extras = getExtrasBreakdownFromInnings(inn);
+
+      const teamMatchPlayers = matchPlayers
+        .filter((p: any) => p.team === battingTeam)
+        .map((p: any) => ({
+          playerId: p.playerId,
+          name: p.player?.name || playerMap[p.playerId]?.name,
+        }));
+
+      const battedPlayerIds = new Set(teamBattingStats.map((s) => s.playerId));
+      const yetToBat = teamMatchPlayers.filter((p: any) => !battedPlayerIds.has(p.playerId));
+
+      return {
+        inningsId: inn.id,
+        inningsNumber: inn.inningsNumber,
+        battingTeam,
+        totalRuns: inn.totalRuns,
+        totalWickets: inn.totalWickets,
+        overs: ballsToOvers(inn.totalBalls),
+        status: inn.status,
+        extras,
+        batting: battingTable,
+        bowling: bowlingTable,
+        yetToBat,
+        dismissals: dismissalsByInnings[inn.id] || [],
+      };
+    });
+
+  const firstInnings = (match.innings as any[]).find((i) => i.inningsNumber === 1);
+  const secondInnings = (match.innings as any[]).find((i) => i.inningsNumber === 2);
+
+  let target: number | null = null;
+  let currentRunRate = 0;
+  let requiredRuns: number | null = null;
+  let requiredBalls: number | null = null;
+  let requiredRunRate: number | null = null;
+
+  if (match.currentInnings === 1 && firstInnings) {
+    currentRunRate = calculateRunRate(firstInnings.totalRuns, firstInnings.totalBalls);
+  }
+
+  if (match.currentInnings === 2 && firstInnings && secondInnings) {
+    const computedTarget = firstInnings.totalRuns + 1;
+    target = computedTarget;
+    currentRunRate = calculateRunRate(secondInnings.totalRuns, secondInnings.totalBalls);
+
+    const totalMatchBalls = match.overs * 6;
+    requiredRuns = Math.max(computedTarget - secondInnings.totalRuns, 0);
+    requiredBalls = Math.max(totalMatchBalls - secondInnings.totalBalls, 0);
+    requiredRunRate =
+      requiredBalls > 0 ? Number(((requiredRuns / requiredBalls) * 6).toFixed(2)) : 0;
+  }
+
+  let result: string | null = null;
+  if (match.status === MATCH_STATUS.COMPLETED) {
+    if (match.resultType === RESULT_TYPE.TIE) {
+      result = "Match tied";
+    } else if (match.winner) {
+      const winnerName = match.winner === TEAM.A ? match.teamAName : match.teamBName;
+
+      let unit: string;
+      if (match.resultType === RESULT_TYPE.RUNS) {
+        unit = match.resultMargin === 1 ? "run" : "runs";
+      } else if (match.resultType === RESULT_TYPE.WICKETS) {
+        unit = match.resultMargin === 1 ? "wicket" : "wickets";
+      } else {
+        unit = "runs";
+      }
+
+      result = `${winnerName} won by ${match.resultMargin} ${unit}`;
+    }
+  }
+
+  return {
+    matchId: match.id,
+    status: match.status,
+    currentInnings: match.currentInnings,
+    teamAName: match.teamAName,
+    teamBName: match.teamBName,
+    overs: match.overs,
+
+    tossWinner: match.tossWinner,
+    tossDecision: match.tossDecision,
+
+    target,
+    currentRunRate,
+    requiredRuns,
+    requiredBalls,
+    requiredRunRate,
+
+    result,
+
+    innings: inningsScorecards,
   };
 };
 
@@ -968,7 +1189,8 @@ export const getMatchScoreService = async (matchId: string) => {
   }
 
   if (match.currentInnings === 2 && firstInnings && secondInnings) {
-    target = firstInnings.totalRuns + 1;
+    const computedTarget = firstInnings.totalRuns + 1;
+    target = computedTarget;
 
     currentRunRate = calculateRunRate(
       secondInnings.totalRuns,
@@ -977,7 +1199,7 @@ export const getMatchScoreService = async (matchId: string) => {
 
     const totalMatchBalls = match.overs * 6;
 
-    requiredRuns = Math.max(target - secondInnings.totalRuns, 0);
+    requiredRuns = Math.max(computedTarget - secondInnings.totalRuns, 0);
     requiredBalls = Math.max(totalMatchBalls - secondInnings.totalBalls, 0);
 
     requiredRunRate =

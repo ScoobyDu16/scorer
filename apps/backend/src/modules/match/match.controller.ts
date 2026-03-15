@@ -10,6 +10,7 @@ import {
   endInningsService,
   getCreatedMatchesService,
   getMatchScoreService,
+  getMatchScorecardService,
   getMatchPlayersService,
   getMatchesService,
   getMatchService,
@@ -76,6 +77,23 @@ export const getMatchScore = async (req: AuthRequest, res: Response) => {
     res.json(score);
   } catch (error: any) {
     businessLogger.error('fetching match score', error, { matchId: req.params.matchId });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMatchScorecard = async (req: AuthRequest, res: Response) => {
+  try {
+    const matchId = req.params.matchId as string;
+
+    businessLogger.fetching('match scorecard', `match-id ${matchId}`);
+
+    const scorecard = await getMatchScorecardService(matchId);
+
+    businessLogger.found('match scorecard', scorecard, { matchId });
+
+    res.json(scorecard);
+  } catch (error: any) {
+    businessLogger.error('fetching match scorecard', error, { matchId: req.params.matchId });
     res.status(500).json({ message: error.message });
   }
 };

@@ -10,6 +10,7 @@ import {
   getMatch,
   getMatchPlayers,
   getMatchScore,
+  getMatchScorecard,
   getMatches,
   startMatch,
   startSecondInnings,
@@ -50,5 +51,7 @@ router.delete("/:matchId/balls/last", authMiddleware, undoLastBall);
 router.post("/:matchId/end-innings", authMiddleware, endInnings);
 
 router.get("/:matchId/score", getMatchScore);
+
+router.get("/:matchId/scorecard", getMatchScorecard);
 
 export default router;

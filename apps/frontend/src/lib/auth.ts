@@ -202,6 +202,11 @@ export const matchAPI = {
     return response.data;
   },
 
+  getMatchScorecard: async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/scorecard`);
+    return response.data;
+  },
+
   getMatchPlayers: async (matchId: string) => {
     const response = await api.get(`/matches/${matchId}/players`);
     return response.data;
