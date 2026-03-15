@@ -90,8 +90,7 @@ export const MatchManagementPage: React.FC<MatchManagementProps> = ({
           navigate(`/scoring/${matchId}`);
           break;
         case "COMPLETED":
-          // TODO: Navigate to scorecard/history when implemented
-          alert("Match completed. Scorecard view coming soon!");
+          navigate(`/match/${matchId}/scorecard`);
           break;
         default:
           alert("Unknown match status");
@@ -219,17 +218,15 @@ export const MatchManagementPage: React.FC<MatchManagementProps> = ({
                     {/* Actions */}
                     <div className="flex items-center space-x-2 ml-4">
                       {/* View/Open Match Button */}
-                      {match.status !== "COMPLETED" && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/match-flow/${match.id}`);
-                          }}
-                          className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                        >
-                          View
-                        </button>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMatchClick(match.id);
+                        }}
+                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        View
+                      </button>
 
                       {/* Delete Button - Visible for all matches */}
                       <button

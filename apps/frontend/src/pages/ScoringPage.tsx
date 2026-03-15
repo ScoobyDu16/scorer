@@ -50,8 +50,12 @@ export const ScoringPage: React.FC = () => {
   const { data: matchScore, isLoading: scoreLoading } = useQuery({
     queryKey: ["matchScore", matchId],
     queryFn: () => matchAPI.getMatchScore(matchId!),
-    enabled: !!matchId && activeTab === "SCORING",
-    refetchInterval: activeTab === "SCORING" ? 2000 : false,
+    enabled: !!matchId,
+    refetchInterval: (query) => {
+      const data: any = query.state.data;
+      const isCompleted = data?.status === "COMPLETED";
+      return activeTab === "SCORING" && !isCompleted ? 2000 : false;
+    },
   });
 
   const {
@@ -167,6 +171,12 @@ export const ScoringPage: React.FC = () => {
   };
 
   const matchState = getMatchState();
+
+  useEffect(() => {
+    if (matchScore?.status === "COMPLETED" && matchId) {
+      navigate(`/match/${matchId}/scorecard`, { replace: true });
+    }
+  }, [matchScore?.status, matchId, navigate]);
 
   const ScorecardView = ({ scorecard }: { scorecard: any }) => {
     if (!scorecard) return null;
@@ -401,142 +411,6 @@ export const ScoringPage: React.FC = () => {
     } catch (error: any) {
       alert(`Error starting second innings: ${error.message}`);
     }
-  };
-
-  // Component for match completed state
-  const MatchCompletedScreen = ({ matchScore }: { matchScore: any }) => {
-    const completedInnings =
-      matchScore.innings?.filter((i: any) => i.status === "COMPLETED") || [];
-    const firstInnings = completedInnings.find(
-      (i: any) => i.inningsNumber === 1,
-    );
-    const secondInnings = completedInnings.find(
-      (i: any) => i.inningsNumber === 2,
-    );
-
-    return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="max-w-2xl w-full mx-auto px-4">
-          <div className="bg-white shadow rounded-lg p-8">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-6">
-                Match Completed
-              </h1>
-
-              {/* Result Display */}
-              <div className="text-2xl font-semibold text-green-600 mb-8">
-                {matchScore.result}
-              </div>
-
-              {/* Scorecard */}
-              <div className="space-y-6 mb-8">
-                {firstInnings && (
-                  <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold text-lg mb-2">
-                      {matchScore.teamAName} - 1st Innings
-                    </h3>
-                    <div className="text-xl">
-                      {firstInnings.totalRuns}/{firstInnings.totalWickets}
-                      <span className="text-gray-600 ml-2">
-                        ({firstInnings.totalOvers} overs)
-                      </span>
-                    </div>
-                    {/* Extras Display */}
-                    {firstInnings.extras && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        Extras: {firstInnings.extras.total}
-                        {firstInnings.extras.total > 0 && (
-                          <span>
-                            {" ("}
-                            {firstInnings.extras.wide > 0 && (
-                              <span>WD: {firstInnings.extras.wide}</span>
-                            )}
-                            {firstInnings.extras.noBall > 0 && (
-                              <span>, NB: {firstInnings.extras.noBall}</span>
-                            )}
-                            {firstInnings.extras.bye > 0 && (
-                              <span>, B: {firstInnings.extras.bye}</span>
-                            )}
-                            {firstInnings.extras.legBye > 0 && (
-                              <span>, LB: {firstInnings.extras.legBye}</span>
-                            )}
-                            {")"}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {secondInnings && (
-                  <div className="border rounded-lg p-4">
-                    <h3 className="font-semibold text-lg mb-2">
-                      {matchScore.teamBName} - 2nd Innings
-                    </h3>
-                    <div className="text-xl">
-                      {secondInnings.totalRuns}/{secondInnings.totalWickets}
-                      <span className="text-gray-600 ml-2">
-                        ({secondInnings.totalOvers} overs)
-                      </span>
-                    </div>
-                    {/* Extras Display */}
-                    {secondInnings.extras && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        Extras: {secondInnings.extras.total}
-                        {secondInnings.extras.total > 0 && (
-                          <span>
-                            {" ("}
-                            {secondInnings.extras.wide > 0 && (
-                              <span>WD: {secondInnings.extras.wide}</span>
-                            )}
-                            {secondInnings.extras.noBall > 0 && (
-                              <span>, NB: {secondInnings.extras.noBall}</span>
-                            )}
-                            {secondInnings.extras.bye > 0 && (
-                              <span>, B: {secondInnings.extras.bye}</span>
-                            )}
-                            {secondInnings.extras.legBye > 0 && (
-                              <span>, LB: {secondInnings.extras.legBye}</span>
-                            )}
-                            {")"}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Man of the Match */}
-              {matchScore.manOfTheMatch && (
-                <div className="bg-blue-50 rounded-lg p-4 mb-8">
-                  <h3 className="font-semibold text-lg mb-2">
-                    Man of the Match
-                  </h3>
-                  <div className="text-xl">{matchScore.manOfTheMatch.name}</div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-center space-x-4">
-                <button className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                  View Scorecard
-                </button>
-                <button className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700">
-                  Share
-                </button>
-                <button
-                  onClick={() => navigate("/")}
-                  className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  Start New Match
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   // Component for innings break state
@@ -1237,7 +1111,9 @@ export const ScoringPage: React.FC = () => {
   if (matchState === "MATCH_COMPLETED") {
     return (
       <PageShell>
-        <MatchCompletedScreen matchScore={matchScore} />
+        <div className="flex justify-center items-center py-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+        </div>
       </PageShell>
     );
   }

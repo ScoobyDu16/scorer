@@ -9,6 +9,7 @@ import { PlayersPage } from "./pages/PlayersPage";
 import { GenerateAccessCodePage } from "./pages/GenerateAccessCodePage";
 import { AccessCodePage } from "./pages/AccessCodePage";
 import { ScoringPage } from "./pages/ScoringPage";
+import { ScorecardPage } from "./pages/ScorecardPage";
 import { MatchFlow } from "./components/MatchFlow";
 import { MatchManagementPage } from "./pages/MatchManagementPage";
 
@@ -42,6 +43,10 @@ function App() {
                   />
                   <Route path="/access-code" element={<AccessCodePage />} />
                   <Route path="/scoring/:matchId" element={<ScoringPage />} />
+                  <Route
+                    path="/match/:matchId/scorecard"
+                    element={<ScorecardPage />}
+                  />
                   <Route
                     path="/match-management"
                     element={<MatchManagementPage turfId="current" />}
