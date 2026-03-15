@@ -7,6 +7,7 @@ import { AuthPage } from "./pages/AuthPage";
 import { Dashboard } from "./pages/Dashboard";
 import { PlayersPage } from "./pages/PlayersPage";
 import { PlayerProfilePage } from "./pages/PlayerProfilePage";
+import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { GenerateAccessCodePage } from "./pages/GenerateAccessCodePage";
 import { AccessCodePage } from "./pages/AccessCodePage";
 import { ScoringPage } from "./pages/ScoringPage";
@@ -37,6 +38,10 @@ function App() {
                     element={<Navigate to="/dashboard" replace />}
                   />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route
+                    path="/leaderboard/:statType"
+                    element={<LeaderboardPage />}
+                  />
                   <Route path="/players" element={<PlayersPage />} />
                   <Route
                     path="/players/:playerId"

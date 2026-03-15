@@ -242,6 +242,27 @@ export const dashboardAPI = {
     const response = await api.get("/dashboard");
     return response.data;
   },
+
+  getTopPlayers: async () => {
+    const response = await api.get("/dashboard/top-players");
+    return response.data;
+  },
+};
+
+export const leaderboardAPI = {
+  getLeaderboard: async (params: {
+    metric: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams({
+      metric: params.metric,
+      page: String(params.page || 1),
+      limit: String(params.limit || 20),
+    });
+    const response = await api.get(`/leaderboard?${query.toString()}`);
+    return response.data;
+  },
 };
 
 export const setAuthToken = (token: string) => {
