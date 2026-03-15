@@ -4,6 +4,7 @@ import {
   createPlayerService,
   getPlayerByIdService,
   getPlayerCareerStatsService,
+  getPlayerCareerService,
   getPlayersService,
   updatePlayerService,
   deletePlayerService,
@@ -16,6 +17,19 @@ export const createPlayer = async (req: AuthRequest, res: Response) => {
     const player = await createPlayerService(turfId, req.body);
 
     res.status(201).json(player);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const getPlayerCareer = async (req: AuthRequest, res: Response) => {
+  try {
+    const turfId = req.turfId!;
+    const playerId = req.params.playerId as string;
+
+    const career = await getPlayerCareerService(turfId, playerId);
+
+    res.json(career);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

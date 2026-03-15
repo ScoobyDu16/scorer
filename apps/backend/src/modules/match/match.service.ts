@@ -13,6 +13,8 @@ import {
   updateMaidensRepo,
   upsertPlayerMatchStatsRepo,
   getNextBattingOrderRepo,
+  setDismissalTypeRepo,
+  clearDismissalTypeRepo,
 } from "../player/player.repository";
 import { getWicketBallsByInningsRepo } from "../ball/balls.repository";
 import {
@@ -797,6 +799,15 @@ export const addBallService = async (matchId: string, data: any) => {
     );
   }
 
+  if (data.isWicket && data.dismissedPlayerId && data.wicketType) {
+    await upsertPlayerMatchStatsRepo(
+      matchId,
+      data.dismissedPlayerId,
+      innings.battingTeam,
+    );
+    await setDismissalTypeRepo(matchId, data.dismissedPlayerId, data.wicketType);
+  }
+
   // 3️⃣️⃣ Non-striker stats - ensure non-striker has stats record
   const recentBalls = await getLastBallsRepo(data.inningsId, 6);
 
@@ -979,6 +990,10 @@ export const undoLastBallService = async (matchId: string) => {
       ballToDelete.isWicket, // Pass wicket flag
       ballToDelete.isLegalDelivery, // Pass legality for ball count
     );
+  }
+
+  if (ballToDelete.isWicket && ballToDelete.dismissedPlayerId) {
+    await clearDismissalTypeRepo(matchId, ballToDelete.dismissedPlayerId);
   }
 
   // 7️⃣ Rebuild live match state by fetching new last ball

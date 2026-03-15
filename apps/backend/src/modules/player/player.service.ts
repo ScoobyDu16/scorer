@@ -3,6 +3,9 @@ import {
   createPlayerRepo,
   findPlayerByUniqueFields,
   getPlayerCareerStatsRepo,
+  getPlayerCareerBattingAggRepo,
+  getPlayerCareerBowlingAggRepo,
+  getPlayerBestBowlingInningsRepo,
   getPlayersRepo,
   updatePlayerRepo,
   deletePlayerRepo,
@@ -105,6 +108,67 @@ export const getPlayerCareerStatsService = async (playerId: string) => {
     runsConceded,
     strikeRate: Number(strikeRate.toFixed(2)),
     economy: Number(economy.toFixed(2)),
+  };
+};
+
+export const getPlayerCareerService = async (turfId: string, playerId: string) => {
+  const battingAgg = await getPlayerCareerBattingAggRepo(turfId, playerId);
+  const bowlingAgg = await getPlayerCareerBowlingAggRepo(turfId, playerId);
+  const bestBowling = await getPlayerBestBowlingInningsRepo(turfId, playerId);
+
+  const battingMatches = Number(battingAgg?.matches || 0);
+  const inningsBatted = Number(battingAgg?.inningsBatted || 0);
+  const outs = Number((battingAgg as any)?.outs || 0);
+  const runs = Number(battingAgg?.runs || 0);
+  const highestScore = Number(battingAgg?.highestScore || 0);
+  const ballsFaced = Number(battingAgg?.ballsFaced || 0);
+  const fours = Number(battingAgg?.fours || 0);
+  const sixes = Number(battingAgg?.sixes || 0);
+  const ducks = Number(battingAgg?.ducks || 0);
+  const strikeRate = Number(battingAgg?.strikeRate || 0);
+
+  const inningsBowled = Number(bowlingAgg?.inningsBowled || 0);
+  const ballsBowled = Number(bowlingAgg?.ballsBowled || 0);
+  const dotsBowled = Number(bowlingAgg?.dotsBowled || 0);
+  const maidens = Number(bowlingAgg?.maidens || 0);
+  const runsConceded = Number(bowlingAgg?.runsConceded || 0);
+  const wickets = Number(bowlingAgg?.wickets || 0);
+  const economy = Number(bowlingAgg?.economy || 0);
+  const bowlingStrikeRate = Number(bowlingAgg?.strikeRate || 0);
+  const bowlingAverage = Number(bowlingAgg?.average || 0);
+
+  const overs = ballsToOvers(ballsBowled);
+  const bestBowlingText = bestBowling
+    ? `${bestBowling.wickets}/${bestBowling.runsConceded}`
+    : null;
+
+  return {
+    playerId,
+    batting: {
+      matches: battingMatches,
+      inningsBatted,
+      runs,
+      highestScore,
+      ballsFaced,
+      fours,
+      sixes,
+      strikeRate: Number(strikeRate.toFixed(2)),
+      average: outs > 0 ? Number((runs / outs).toFixed(2)) : 0,
+      ducks,
+    },
+    bowling: {
+      inningsBowled,
+      ballsBowled,
+      overs: Number(overs.toFixed(1)),
+      runsConceded,
+      wickets,
+      bestBowling: bestBowlingText,
+      economy: Number(economy.toFixed(2)),
+      average: Number(bowlingAverage.toFixed(2)),
+      strikeRate: Number(bowlingStrikeRate.toFixed(2)),
+      maidens,
+      dotsBowled,
+    },
   };
 };
 

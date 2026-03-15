@@ -176,6 +176,13 @@
       "when": 1773465670303,
       "tag": "0024_perfect_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1773560278079,
+      "tag": "0025_lyrical_red_shift",
+      "breakpoints": true
     }
   ]
 }

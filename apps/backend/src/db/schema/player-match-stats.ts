@@ -8,7 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { matches } from "./matches";
 import { players } from "./players";
-import { teamEnum } from "./enums";
+import { teamEnum, dismissalTypeEnum } from "./enums";
 
 export const playerMatchStats = pgTable(
   "player_match_stats",
@@ -38,6 +38,8 @@ export const playerMatchStats = pgTable(
     dotsFaced: integer("dots_faced").default(0).notNull(),
     fours: integer("fours").default(0).notNull(),
     sixes: integer("sixes").default(0).notNull(),
+
+    dismissalType: dismissalTypeEnum("dismissal_type"),
 
     /**
      * Bowling stats

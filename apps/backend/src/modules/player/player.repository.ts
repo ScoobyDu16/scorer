@@ -1,5 +1,5 @@
 import { db } from "../../db/client";
-import { players, matchPlayers } from "../../db/schema";
+import { players, matchPlayers, matches } from "../../db/schema";
 import {
   eq,
   and,
@@ -131,6 +131,85 @@ export const getPlayerCareerStatsRepo = async (playerId: string) => {
   return result[0];
 };
 
+export const getPlayerCareerBattingAggRepo = async (
+  turfId: string,
+  playerId: string,
+) => {
+  const result = await db
+    .select({
+      matches: sql<number>`count(distinct ${playerMatchStats.matchId})`,
+      inningsBatted:
+        sql<number>`sum(case when ${playerMatchStats.ballsFaced} > 0 then 1 else 0 end)`,
+      outs:
+        sql<number>`sum(case when ${playerMatchStats.dismissalType} is not null then 1 else 0 end)`,
+      runs: sql<number>`coalesce(sum(${playerMatchStats.runs}), 0)`,
+      highestScore: sql<number>`coalesce(max(${playerMatchStats.runs}), 0)`,
+      ballsFaced: sql<number>`coalesce(sum(${playerMatchStats.ballsFaced}), 0)`,
+      fours: sql<number>`coalesce(sum(${playerMatchStats.fours}), 0)`,
+      sixes: sql<number>`coalesce(sum(${playerMatchStats.sixes}), 0)`,
+      ducks:
+        sql<number>`sum(case when ${playerMatchStats.ballsFaced} > 0 and ${playerMatchStats.runs} = 0 then 1 else 0 end)`,
+      strikeRate:
+        sql<number>`case when coalesce(sum(${playerMatchStats.ballsFaced}), 0) > 0 then (coalesce(sum(${playerMatchStats.runs}), 0)::float / coalesce(sum(${playerMatchStats.ballsFaced}), 0)::float) * 100 else 0 end`,
+    })
+    .from(playerMatchStats)
+    .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+    .where(and(eq(matches.turfId, turfId), eq(playerMatchStats.playerId, playerId)));
+
+  return result[0];
+};
+
+export const getPlayerCareerBowlingAggRepo = async (
+  turfId: string,
+  playerId: string,
+) => {
+  const result = await db
+    .select({
+      inningsBowled:
+        sql<number>`sum(case when ${playerMatchStats.ballsBowled} > 0 then 1 else 0 end)`,
+      ballsBowled: sql<number>`coalesce(sum(${playerMatchStats.ballsBowled}), 0)`,
+      dotsBowled: sql<number>`coalesce(sum(${playerMatchStats.dotsBowled}), 0)`,
+      maidens: sql<number>`coalesce(sum(${playerMatchStats.maidens}), 0)`,
+      runsConceded: sql<number>`coalesce(sum(${playerMatchStats.runsConceded}), 0)`,
+      wickets: sql<number>`coalesce(sum(${playerMatchStats.wickets}), 0)`,
+      economy:
+        sql<number>`case when coalesce(sum(${playerMatchStats.ballsBowled}), 0) > 0 then (coalesce(sum(${playerMatchStats.runsConceded}), 0)::float / coalesce(sum(${playerMatchStats.ballsBowled}), 0)::float) * 6 else 0 end`,
+      strikeRate:
+        sql<number>`case when coalesce(sum(${playerMatchStats.wickets}), 0) > 0 then (coalesce(sum(${playerMatchStats.ballsBowled}), 0)::float / coalesce(sum(${playerMatchStats.wickets}), 0)::float) else 0 end`,
+      average:
+        sql<number>`case when coalesce(sum(${playerMatchStats.wickets}), 0) > 0 then (coalesce(sum(${playerMatchStats.runsConceded}), 0)::float / coalesce(sum(${playerMatchStats.wickets}), 0)::float) else 0 end`,
+    })
+    .from(playerMatchStats)
+    .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+    .where(and(eq(matches.turfId, turfId), eq(playerMatchStats.playerId, playerId)));
+
+  return result[0];
+};
+
+export const getPlayerBestBowlingInningsRepo = async (
+  turfId: string,
+  playerId: string,
+) => {
+  const result = await db
+    .select({
+      wickets: playerMatchStats.wickets,
+      runsConceded: playerMatchStats.runsConceded,
+    })
+    .from(playerMatchStats)
+    .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+    .where(
+      and(
+        eq(matches.turfId, turfId),
+        eq(playerMatchStats.playerId, playerId),
+        sql`${playerMatchStats.ballsBowled} > 0`,
+      ),
+    )
+    .orderBy(desc(playerMatchStats.wickets), asc(playerMatchStats.runsConceded))
+    .limit(1);
+
+  return result[0] || null;
+};
+
 export const getNextBattingOrderRepo = async (
   matchId: string,
   team: "A" | "B",
@@ -248,6 +327,28 @@ export const updateBattingStatsRepo = async (
       dots_faced = dots_faced + ${dots},
       fours = fours + ${fours},
       sixes = sixes + ${sixes}
+    WHERE match_id = ${matchId}
+      AND player_id = ${playerId}
+  `);
+};
+
+export const setDismissalTypeRepo = async (
+  matchId: string,
+  playerId: string,
+  dismissalType: string,
+) => {
+  await db.execute(sql`
+    UPDATE player_match_stats
+    SET dismissal_type = ${dismissalType}
+    WHERE match_id = ${matchId}
+      AND player_id = ${playerId}
+  `);
+};
+
+export const clearDismissalTypeRepo = async (matchId: string, playerId: string) => {
+  await db.execute(sql`
+    UPDATE player_match_stats
+    SET dismissal_type = NULL
     WHERE match_id = ${matchId}
       AND player_id = ${playerId}
   `);

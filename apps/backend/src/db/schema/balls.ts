@@ -4,35 +4,13 @@ import {
   integer,
   boolean,
   timestamp,
-  pgEnum,
   index,
 } from "drizzle-orm/pg-core";
 import { matches } from "./matches";
 import { innings } from "./innings";
 import { players } from "./players";
 
-/**
- * Extras enum
- */
-export const extraTypeEnum = pgEnum("extra_type", [
-  "WIDE",
-  "NO_BALL",
-  "BYE",
-  "LEG_BYE",
-]);
-
-/**
- * Wicket enum
- */
-export const wicketTypeEnum = pgEnum("wicket_type", [
-  "BOWLED",
-  "CAUGHT",
-  "CAUGHT_AND_BOWLED",
-  "RUN_OUT",
-  "LBW",
-  "STUMPED",
-  "HIT_WICKET",
-]);
+import { extraTypeEnum, wicketTypeEnum } from "./enums";
 
 export const balls = pgTable(
   "balls",

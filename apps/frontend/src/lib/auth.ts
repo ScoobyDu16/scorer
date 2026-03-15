@@ -90,6 +90,11 @@ export const playerAPI = {
     const response = await api.get(`/players/${playerId}/stats`);
     return response.data;
   },
+
+  getPlayerCareer: async (playerId: string) => {
+    const response = await api.get(`/players/${playerId}/career`);
+    return response.data;
+  },
 };
 
 export const accessCodeAPI = {

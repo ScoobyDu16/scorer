@@ -55,9 +55,68 @@ export const RESULT_TYPE = {
   TIE: "TIE" as const,
 } as const;
 
+export const extraTypeEnum = pgEnum("extra_type", [
+  "WIDE",
+  "NO_BALL",
+  "BYE",
+  "LEG_BYE",
+]);
+
+export const EXTRA_TYPE = {
+  WIDE: "WIDE" as const,
+  NO_BALL: "NO_BALL" as const,
+  BYE: "BYE" as const,
+  LEG_BYE: "LEG_BYE" as const,
+} as const;
+
+export const wicketTypeEnum = pgEnum("wicket_type", [
+  "BOWLED",
+  "CAUGHT",
+  "CAUGHT_AND_BOWLED",
+  "RUN_OUT",
+  "LBW",
+  "STUMPED",
+  "HIT_WICKET",
+]);
+
+export const WICKET_TYPE = {
+  BOWLED: "BOWLED" as const,
+  CAUGHT: "CAUGHT" as const,
+  CAUGHT_AND_BOWLED: "CAUGHT_AND_BOWLED" as const,
+  RUN_OUT: "RUN_OUT" as const,
+  LBW: "LBW" as const,
+  STUMPED: "STUMPED" as const,
+  HIT_WICKET: "HIT_WICKET" as const,
+} as const;
+
+export const dismissalTypeEnum = pgEnum("dismissal_type", [
+  "BOWLED",
+  "CAUGHT",
+  "CAUGHT_AND_BOWLED",
+  "RUN_OUT",
+  "LBW",
+  "STUMPED",
+  "HIT_WICKET",
+  "RETIRED",
+]);
+
+export const DISMISSAL_TYPE = {
+  BOWLED: "BOWLED" as const,
+  CAUGHT: "CAUGHT" as const,
+  CAUGHT_AND_BOWLED: "CAUGHT_AND_BOWLED" as const,
+  RUN_OUT: "RUN_OUT" as const,
+  LBW: "LBW" as const,
+  STUMPED: "STUMPED" as const,
+  HIT_WICKET: "HIT_WICKET" as const,
+  RETIRED: "RETIRED" as const,
+} as const;
+
 // Type helpers for better TypeScript support
 export type Team = typeof TEAM[keyof typeof TEAM];
 export type MatchStatus = typeof MATCH_STATUS[keyof typeof MATCH_STATUS];
 export type TossDecision = typeof TOSS_DECISION[keyof typeof TOSS_DECISION];
 export type InningsStatus = typeof INNINGS_STATUS[keyof typeof INNINGS_STATUS];
 export type ResultType = typeof RESULT_TYPE[keyof typeof RESULT_TYPE];
+export type ExtraType = typeof EXTRA_TYPE[keyof typeof EXTRA_TYPE];
+export type WicketType = typeof WICKET_TYPE[keyof typeof WICKET_TYPE];
+export type DismissalType = typeof DISMISSAL_TYPE[keyof typeof DISMISSAL_TYPE];

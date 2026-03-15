@@ -6,6 +6,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { AuthPage } from "./pages/AuthPage";
 import { Dashboard } from "./pages/Dashboard";
 import { PlayersPage } from "./pages/PlayersPage";
+import { PlayerProfilePage } from "./pages/PlayerProfilePage";
 import { GenerateAccessCodePage } from "./pages/GenerateAccessCodePage";
 import { AccessCodePage } from "./pages/AccessCodePage";
 import { ScoringPage } from "./pages/ScoringPage";
@@ -37,6 +38,10 @@ function App() {
                   />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/players" element={<PlayersPage />} />
+                  <Route
+                    path="/players/:playerId"
+                    element={<PlayerProfilePage />}
+                  />
                   <Route
                     path="/generate-code"
                     element={<GenerateAccessCodePage />}

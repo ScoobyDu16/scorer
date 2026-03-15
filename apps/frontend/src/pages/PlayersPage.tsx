@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from "react-router-dom";
 import { playerAPI } from '../lib/auth';
 import { Player } from '../lib/api';
 
 export const PlayersPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // State for pagination, search, and sorting
   const [search, setSearch] = useState("");
@@ -246,7 +248,11 @@ export const PlayersPage: React.FC = () => {
                       </tr>
                     ) : (
                       players.map((player) => (
-                        <tr key={player.id} className="hover:bg-gray-50">
+                        <tr
+                          key={player.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => navigate(`/players/${player.id}`)}
+                        >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {player.name}
                           </td>
@@ -261,13 +267,28 @@ export const PlayersPage: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
-                              onClick={() => openEditModal(player)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/players/${player.id}`);
+                              }}
+                              className="text-blue-600 hover:text-blue-900 mr-3"
+                            >
+                              View Stats
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(player);
+                              }}
                               className="text-green-600 hover:text-green-900 mr-3"
                             >
                               Edit
                             </button>
                             <button
-                              onClick={() => openDeleteModal(player)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteModal(player);
+                              }}
                               className="text-red-600 hover:text-red-900"
                             >
                               Delete
