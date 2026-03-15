@@ -13,6 +13,14 @@ const isLeaderboardMetric = (value: string): value is LeaderboardMetric => {
     "strikeRate",
     "average",
     "economy",
+    "highestScore",
+    "most100s",
+    "most50s",
+    "bestBowlingAverage",
+    "bestBowlingFigures",
+    "most3WicketHauls",
+    "most5WicketHauls",
+    "bestBowlingStrikeRate",
   ].includes(value);
 };
 

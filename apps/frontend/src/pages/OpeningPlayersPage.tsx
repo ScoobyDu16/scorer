@@ -31,6 +31,16 @@ export const OpeningPlayersPage: React.FC = () => {
     enabled: !!matchId,
   });
 
+  const { data: match } = useQuery({
+    queryKey: ["match", matchId],
+    queryFn: () => matchAPI.getMatch(matchId!),
+    enabled: !!matchId,
+    staleTime: 60_000,
+  });
+
+  const teamAName = match?.teamAName || "Team A";
+  const teamBName = match?.teamBName || "Team B";
+
   // Filter players by team
   const teamAPlayers =
     matchPlayers?.filter((p: MatchPlayer) => p.team === "A") || [];
@@ -104,7 +114,7 @@ export const OpeningPlayersPage: React.FC = () => {
                 {/* Team A Batsmen */}
                 <div>
                   <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Team A - Opening Batsmen
+                    {teamAName} - Opening Batsmen
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Striker Selection */}
@@ -157,7 +167,7 @@ export const OpeningPlayersPage: React.FC = () => {
                 {/* Team B Bowler */}
                 <div>
                   <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Team B - Opening Bowler
+                    {teamBName} - Opening Bowler
                   </h2>
                   <div className="max-w-md">
                     <label className="block text-sm font-medium text-gray-700 mb-2">

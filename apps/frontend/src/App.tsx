@@ -38,10 +38,7 @@ function App() {
                     element={<Navigate to="/dashboard" replace />}
                   />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route
-                    path="/leaderboard/:statType"
-                    element={<LeaderboardPage />}
-                  />
+                  <Route path="/leaderboard" element={<LeaderboardPage />} />
                   <Route path="/players" element={<PlayersPage />} />
                   <Route
                     path="/players/:playerId"

@@ -269,15 +269,6 @@ export const PlayersPage: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/players/${player.id}`);
-                              }}
-                              className="text-blue-600 hover:text-blue-900 mr-3"
-                            >
-                              View Stats
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
                                 openEditModal(player);
                               }}
                               className="text-green-600 hover:text-green-900 mr-3"

@@ -1,6 +1,6 @@
 import { db } from "../../db/client";
 import { matches, playerMatchStats, players } from "../../db/schema";
-import { eq, sql, desc, asc } from "drizzle-orm";
+import { eq, sql, desc, asc, and } from "drizzle-orm";
 
 export type LeaderboardMetric =
   | "runs"
@@ -10,7 +10,15 @@ export type LeaderboardMetric =
   | "dotsBowled"
   | "strikeRate"
   | "average"
-  | "economy";
+  | "economy"
+  | "highestScore"
+  | "most100s"
+  | "most50s"
+  | "bestBowlingAverage"
+  | "bestBowlingFigures"
+  | "most3WicketHauls"
+  | "most5WicketHauls"
+  | "bestBowlingStrikeRate";
 
 export type LeaderboardRow = {
   playerId: string;
@@ -44,74 +52,148 @@ export const getLeaderboardRepo = async (params: {
   const withMetric = (() => {
     switch (params.metric) {
       case "runs":
-        return db
-          .select({
-            playerId: playerMatchStats.playerId,
-            name: players.name,
-            value: sql<number>`coalesce(sum(${playerMatchStats.runs}), 0)`,
-          })
-          .from(playerMatchStats)
-          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
-          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
-          .where(eq(matches.turfId, params.turfId))
-          .groupBy(playerMatchStats.playerId, players.name)
-          .orderBy(desc(sql`coalesce(sum(${playerMatchStats.runs}), 0)`), asc(players.name));
+        {
+          const agg = db
+            .select({
+              playerId: playerMatchStats.playerId,
+              name: players.name,
+              value: sql<number>`coalesce(sum(${playerMatchStats.runs}), 0)`.as(
+                "value",
+              ),
+            })
+            .from(playerMatchStats)
+            .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+            .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+            .where(eq(matches.turfId, params.turfId))
+            .groupBy(playerMatchStats.playerId, players.name)
+            .as("agg");
+
+          return db
+            .select({
+              playerId: agg.playerId,
+              name: agg.name,
+              value: agg.value,
+            })
+            .from(agg)
+            .where(sql`${agg.value} > 0`)
+            .orderBy(desc(agg.value), asc(agg.name));
+        }
 
       case "wickets":
-        return db
-          .select({
-            playerId: playerMatchStats.playerId,
-            name: players.name,
-            value: sql<number>`coalesce(sum(${playerMatchStats.wickets}), 0)`,
-          })
-          .from(playerMatchStats)
-          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
-          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
-          .where(eq(matches.turfId, params.turfId))
-          .groupBy(playerMatchStats.playerId, players.name)
-          .orderBy(desc(sql`coalesce(sum(${playerMatchStats.wickets}), 0)`), asc(players.name));
+        {
+          const agg = db
+            .select({
+              playerId: playerMatchStats.playerId,
+              name: players.name,
+              value:
+                sql<number>`coalesce(sum(${playerMatchStats.wickets}), 0)`.as(
+                  "value",
+                ),
+            })
+            .from(playerMatchStats)
+            .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+            .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+            .where(eq(matches.turfId, params.turfId))
+            .groupBy(playerMatchStats.playerId, players.name)
+            .as("agg");
+
+          return db
+            .select({
+              playerId: agg.playerId,
+              name: agg.name,
+              value: agg.value,
+            })
+            .from(agg)
+            .where(sql`${agg.value} > 0`)
+            .orderBy(desc(agg.value), asc(agg.name));
+        }
 
       case "fours":
-        return db
-          .select({
-            playerId: playerMatchStats.playerId,
-            name: players.name,
-            value: sql<number>`coalesce(sum(${playerMatchStats.fours}), 0)`,
-          })
-          .from(playerMatchStats)
-          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
-          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
-          .where(eq(matches.turfId, params.turfId))
-          .groupBy(playerMatchStats.playerId, players.name)
-          .orderBy(desc(sql`coalesce(sum(${playerMatchStats.fours}), 0)`), asc(players.name));
+        {
+          const agg = db
+            .select({
+              playerId: playerMatchStats.playerId,
+              name: players.name,
+              value:
+                sql<number>`coalesce(sum(${playerMatchStats.fours}), 0)`.as(
+                  "value",
+                ),
+            })
+            .from(playerMatchStats)
+            .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+            .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+            .where(eq(matches.turfId, params.turfId))
+            .groupBy(playerMatchStats.playerId, players.name)
+            .as("agg");
+
+          return db
+            .select({
+              playerId: agg.playerId,
+              name: agg.name,
+              value: agg.value,
+            })
+            .from(agg)
+            .where(sql`${agg.value} > 0`)
+            .orderBy(desc(agg.value), asc(agg.name));
+        }
 
       case "sixes":
-        return db
-          .select({
-            playerId: playerMatchStats.playerId,
-            name: players.name,
-            value: sql<number>`coalesce(sum(${playerMatchStats.sixes}), 0)`,
-          })
-          .from(playerMatchStats)
-          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
-          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
-          .where(eq(matches.turfId, params.turfId))
-          .groupBy(playerMatchStats.playerId, players.name)
-          .orderBy(desc(sql`coalesce(sum(${playerMatchStats.sixes}), 0)`), asc(players.name));
+        {
+          const agg = db
+            .select({
+              playerId: playerMatchStats.playerId,
+              name: players.name,
+              value:
+                sql<number>`coalesce(sum(${playerMatchStats.sixes}), 0)`.as(
+                  "value",
+                ),
+            })
+            .from(playerMatchStats)
+            .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+            .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+            .where(eq(matches.turfId, params.turfId))
+            .groupBy(playerMatchStats.playerId, players.name)
+            .as("agg");
+
+          return db
+            .select({
+              playerId: agg.playerId,
+              name: agg.name,
+              value: agg.value,
+            })
+            .from(agg)
+            .where(sql`${agg.value} > 0`)
+            .orderBy(desc(agg.value), asc(agg.name));
+        }
 
       case "dotsBowled":
-        return db
-          .select({
-            playerId: playerMatchStats.playerId,
-            name: players.name,
-            value: sql<number>`coalesce(sum(${playerMatchStats.dotsBowled}), 0)`,
-          })
-          .from(playerMatchStats)
-          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
-          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
-          .where(eq(matches.turfId, params.turfId))
-          .groupBy(playerMatchStats.playerId, players.name)
-          .orderBy(desc(sql`coalesce(sum(${playerMatchStats.dotsBowled}), 0)`), asc(players.name));
+        {
+          const agg = db
+            .select({
+              playerId: playerMatchStats.playerId,
+              name: players.name,
+              value:
+                sql<number>`coalesce(sum(${playerMatchStats.dotsBowled}), 0)`.as(
+                  "value",
+                ),
+            })
+            .from(playerMatchStats)
+            .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+            .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+            .where(eq(matches.turfId, params.turfId))
+            .groupBy(playerMatchStats.playerId, players.name)
+            .as("agg");
+
+          return db
+            .select({
+              playerId: agg.playerId,
+              name: agg.name,
+              value: agg.value,
+            })
+            .from(agg)
+            .where(sql`${agg.value} > 0`)
+            .orderBy(desc(agg.value), asc(agg.name));
+        }
 
       case "strikeRate": {
         const minBallsFaced = 30;
@@ -143,7 +225,7 @@ export const getLeaderboardRepo = async (params: {
             ballsFaced: agg.ballsFaced,
           })
           .from(agg)
-          .where(sql`${agg.ballsFaced} >= ${minBallsFaced}`)
+          .where(sql`${agg.ballsFaced} >= ${minBallsFaced} and ${agg.value} > 0`)
           .orderBy(desc(agg.value), asc(agg.name));
       }
 
@@ -161,10 +243,9 @@ export const getLeaderboardRepo = async (params: {
               sql<number>`sum(case when ${playerMatchStats.ballsFaced} > 0 then 1 else 0 end)`.as(
                 "inningsBatted",
               ),
-            outs:
-              sql<number>`sum(case when ${playerMatchStats.dismissalType} is not null then 1 else 0 end)`.as(
-                "outs",
-              ),
+            outs: sql<number>`sum(case when ${playerMatchStats.dismissalType} is not null then 1 else 0 end)`.as(
+              "outs",
+            ),
           })
           .from(playerMatchStats)
           .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
@@ -182,9 +263,7 @@ export const getLeaderboardRepo = async (params: {
             outs: agg.outs,
           })
           .from(agg)
-          .where(
-            sql`${agg.inningsBatted} >= ${minInnings} and ${agg.outs} > 0`,
-          )
+          .where(sql`${agg.inningsBatted} >= ${minInnings} and ${agg.value} > 0`)
           .orderBy(desc(agg.value), asc(agg.name));
       }
 
@@ -218,7 +297,230 @@ export const getLeaderboardRepo = async (params: {
             ballsBowled: agg.ballsBowled,
           })
           .from(agg)
-          .where(sql`${agg.ballsBowled} >= ${minBallsBowled}`)
+          .where(sql`${agg.ballsBowled} >= ${minBallsBowled} and ${agg.value} > 0`)
+          .orderBy(asc(agg.value), asc(agg.name));
+      }
+
+      case "highestScore": {
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value: sql<number>`coalesce(max(${playerMatchStats.runs}), 0)`.as(
+              "value",
+            ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+          })
+          .from(agg)
+          .where(sql`${agg.value} > 0`)
+          .orderBy(desc(agg.value), asc(agg.name));
+      }
+
+      case "most100s": {
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value: sql<number>`coalesce(sum(case when ${playerMatchStats.runs} >= 100 then 1 else 0 end), 0)`.as(
+              "value",
+            ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+          })
+          .from(agg)
+          .where(sql`${agg.value} > 0`)
+          .orderBy(desc(agg.value), asc(agg.name));
+      }
+
+      case "most50s": {
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value: sql<number>`coalesce(sum(case when ${playerMatchStats.runs} >= 50 and ${playerMatchStats.runs} < 100 then 1 else 0 end), 0)`.as(
+              "value",
+            ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+          })
+          .from(agg)
+          .where(sql`${agg.value} > 0`)
+          .orderBy(desc(agg.value), asc(agg.name));
+      }
+
+      case "bestBowlingAverage": {
+        const minBallsBowled = 12;
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value:
+              sql<number>`case when coalesce(sum(${playerMatchStats.wickets}), 0) > 0 then (coalesce(sum(${playerMatchStats.runsConceded}), 0)::float / coalesce(sum(${playerMatchStats.wickets}), 0)::float) else 0 end`.as(
+                "value",
+              ),
+            ballsBowled:
+              sql<number>`coalesce(sum(${playerMatchStats.ballsBowled}), 0)`.as(
+                "ballsBowled",
+              ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+            ballsBowled: agg.ballsBowled,
+          })
+          .from(agg)
+          .where(sql`${agg.ballsBowled} >= ${minBallsBowled} and ${agg.value} > 0`)
+          .orderBy(asc(agg.value), asc(agg.name));
+      }
+
+      case "bestBowlingFigures": {
+        return db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value: sql<number>`coalesce(${playerMatchStats.wickets}, 0)`.as("value"),
+            wickets: sql<number>`coalesce(${playerMatchStats.wickets}, 0)`.as("wickets"),
+            runsConceded: sql<number>`coalesce(${playerMatchStats.runsConceded}, 0)`.as("runsConceded"),
+            matchId: playerMatchStats.matchId,
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(and(
+            eq(matches.turfId, params.turfId),
+            sql`${playerMatchStats.wickets} > 0`
+          ))
+          .orderBy(desc(sql`${playerMatchStats.wickets}`), asc(sql`${playerMatchStats.runsConceded}`), asc(players.name));
+      }
+
+      case "most3WicketHauls": {
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value: sql<number>`coalesce(sum(case when ${playerMatchStats.wickets} >= 3 then 1 else 0 end), 0)`.as(
+              "value",
+            ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+          })
+          .from(agg)
+          .where(sql`${agg.value} > 0`)
+          .orderBy(desc(agg.value), asc(agg.name));
+      }
+
+      case "most5WicketHauls": {
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value: sql<number>`coalesce(sum(case when ${playerMatchStats.wickets} >= 5 then 1 else 0 end), 0)`.as(
+              "value",
+            ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+          })
+          .from(agg)
+          .where(sql`${agg.value} > 0`)
+          .orderBy(desc(agg.value), asc(agg.name));
+      }
+
+      case "bestBowlingStrikeRate": {
+        const minBallsBowled = 12;
+        const agg = db
+          .select({
+            playerId: playerMatchStats.playerId,
+            name: players.name,
+            value:
+              sql<number>`case when coalesce(sum(${playerMatchStats.wickets}), 0) > 0 then (coalesce(sum(${playerMatchStats.ballsBowled}), 0)::float / coalesce(sum(${playerMatchStats.wickets}), 0)::float) else 0 end`.as(
+                "value",
+              ),
+            ballsBowled:
+              sql<number>`coalesce(sum(${playerMatchStats.ballsBowled}), 0)`.as(
+                "ballsBowled",
+              ),
+          })
+          .from(playerMatchStats)
+          .innerJoin(matches, eq(matches.id, playerMatchStats.matchId))
+          .innerJoin(players, eq(players.id, playerMatchStats.playerId))
+          .where(eq(matches.turfId, params.turfId))
+          .groupBy(playerMatchStats.playerId, players.name)
+          .as("agg");
+
+        return db
+          .select({
+            playerId: agg.playerId,
+            name: agg.name,
+            value: agg.value,
+            ballsBowled: agg.ballsBowled,
+          })
+          .from(agg)
+          .where(sql`${agg.ballsBowled} >= ${minBallsBowled} and ${agg.value} > 0`)
           .orderBy(asc(agg.value), asc(agg.name));
       }
 
@@ -242,10 +544,17 @@ export const getLeaderboardRepo = async (params: {
   const hasNext = rowsPlusOne.length > limit;
   const rows = rowsPlusOne.slice(0, limit).map((r: any) => {
     const meta: Record<string, number> = {};
-    if (typeof r.ballsFaced !== "undefined") meta.ballsFaced = Number(r.ballsFaced);
-    if (typeof r.inningsBatted !== "undefined") meta.inningsBatted = Number(r.inningsBatted);
+    if (typeof r.ballsFaced !== "undefined")
+      meta.ballsFaced = Number(r.ballsFaced);
+    if (typeof r.inningsBatted !== "undefined")
+      meta.inningsBatted = Number(r.inningsBatted);
     if (typeof r.outs !== "undefined") meta.outs = Number(r.outs);
-    if (typeof r.ballsBowled !== "undefined") meta.ballsBowled = Number(r.ballsBowled);
+    if (typeof r.ballsBowled !== "undefined")
+      meta.ballsBowled = Number(r.ballsBowled);
+    if (typeof r.wickets !== "undefined") meta.wickets = Number(r.wickets);
+    if (typeof r.runsConceded !== "undefined")
+      meta.runsConceded = Number(r.runsConceded);
+    if (typeof r.matchId !== "undefined") meta.matchId = Number(r.matchId);
 
     return {
       playerId: r.playerId,

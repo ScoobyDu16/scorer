@@ -185,7 +185,10 @@ export const ScorecardPage: React.FC = () => {
                       {(inn.batting || []).map((b: any) => (
                         <tr key={b.playerId}>
                           <td className="px-4 py-3">
-                            <div className="font-medium text-gray-900">
+                            <div 
+                              className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                              onClick={() => navigate(`/players/${b.playerId}`)}
+                            >
                               {b.name}
                             </div>
                             <div className="text-xs text-gray-600">
@@ -273,8 +276,13 @@ export const ScorecardPage: React.FC = () => {
                     <tbody className="divide-y divide-gray-200">
                       {(inn.bowling || []).map((bo: any) => (
                         <tr key={bo.playerId}>
-                          <td className="px-4 py-3 font-medium text-gray-900">
-                            {bo.name}
+                          <td className="px-4 py-3">
+                            <div 
+                              className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                              onClick={() => navigate(`/players/${bo.playerId}`)}
+                            >
+                              {bo.name}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-right text-gray-900">
                             {bo.overs}
