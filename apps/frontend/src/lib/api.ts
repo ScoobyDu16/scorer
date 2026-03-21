@@ -46,14 +46,18 @@ export interface TurfRegisterData {
 }
 
 export interface AuthResponse {
-  turf: {
+  success: boolean;
+  message: string;
+  token?: string;
+  user?: {
     id: string;
     name: string;
-    email: string;
     phone?: string;
-    address?: string;
+    email?: string;
+    role: "SUPER_ADMIN" | "TURF_ADMIN" | "SCORER" | "PLAYER";
+    turfId?: string;
+    turfName?: string;
   };
-  token: string;
 }
 
 export interface Player {

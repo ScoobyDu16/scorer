@@ -14,11 +14,34 @@ import { ScoringPage } from "./pages/ScoringPage";
 import { ScorecardPage } from "./pages/ScorecardPage";
 import { MatchFlow } from "./components/MatchFlow";
 import { MatchManagementPage } from "./pages/MatchManagementPage";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { SuperAdminDashboardPage } from "./pages/SuperAdminDashboardPage";
+import { TurfAdminDashboardPage } from "./pages/TurfAdminDashboardPage";
+import { ScorerDashboardPage } from "./pages/ScorerDashboardPage";
+import { PlayerDashboardPage } from "./pages/PlayerDashboardPage";
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <RegisterPage />
+            </PublicRoute>
+          }
+        />
         <Route
           path="/auth"
           element={
@@ -27,17 +50,27 @@ function App() {
             </PublicRoute>
           }
         />
+
+        {/* Protected Routes */}
         <Route
           path="/*"
           element={
             <ProtectedRoute>
               <AppLayout>
                 <Routes>
+                  {/* Default redirect */}
                   <Route
                     path="/"
                     element={<Navigate to="/dashboard" replace />}
                   />
+
+                  {/* Role-based Dashboard Routes */}
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/admin/dashboard" element={<SuperAdminDashboardPage />} />
+                  <Route path="/scorer/dashboard" element={<ScorerDashboardPage />} />
+                  <Route path="/player/dashboard" element={<PlayerDashboardPage />} />
+
+                  {/* Existing Routes */}
                   <Route path="/leaderboard" element={<LeaderboardPage />} />
                   <Route path="/players" element={<PlayersPage />} />
                   <Route

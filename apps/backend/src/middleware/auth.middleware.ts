@@ -4,10 +4,28 @@ import { env } from "../config/env";
 import { authLogger } from "../utils/logger";
 
 /**
- * Extend Request type to include turfId
+ * Role types for production-grade system
+ */
+export type UserRole = "SUPER_ADMIN" | "TURF_ADMIN" | "SCORER" | "PLAYER";
+
+/**
+ * Extend Request type to include auth data
  */
 export interface AuthRequest extends Request {
+  userId?: string;
   turfId?: string;
+  role?: UserRole;
+}
+
+/**
+ * JWT payload structure
+ */
+export interface JWTPayload {
+  userId?: string;
+  turfId?: string;
+  role: UserRole;
+  iat?: number;
+  exp?: number;
 }
 
 export const authMiddleware = (
@@ -31,11 +49,12 @@ export const authMiddleware = (
       return res.status(401).json({ message: "Token missing" });
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET) as {
-      turfId: string;
-    };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JWTPayload;
 
+    req.userId = decoded.userId;
     req.turfId = decoded.turfId;
+    req.role = decoded.role;
+    
     authLogger.tokenValidation(true);
     next();
   } catch (error: any) {

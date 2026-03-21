@@ -16,6 +16,7 @@ import {
   startSecondInnings,
   undoLastBall,
 } from "./match.controller";
+import scoringLockRoutes from "./scoring-lock.routes";
 
 const router = Router();
 
@@ -53,5 +54,8 @@ router.post("/:matchId/end-innings", authMiddleware, endInnings);
 router.get("/:matchId/score", getMatchScore);
 
 router.get("/:matchId/scorecard", getMatchScorecard);
+
+// Scoring lock routes
+router.use("/:matchId", scoringLockRoutes);
 
 export default router;

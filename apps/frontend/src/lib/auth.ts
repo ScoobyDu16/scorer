@@ -7,19 +7,57 @@ import {
   Match,
 } from "./api";
 
+// Updated interfaces to match backend auth API
+export interface LoginRequest {
+  phone?: string;
+  email?: string;
+  password?: string;
+  otp?: string;
+}
+
+export interface RegisterRequest {
+  name: string;
+  phone?: string;
+  email?: string;
+  password?: string;
+  role: "SUPER_ADMIN" | "TURF_ADMIN" | "SCORER" | "PLAYER";
+  turfId?: string;
+  otp?: string;
+}
+
+export interface AuthUserResponse {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  role: "SUPER_ADMIN" | "TURF_ADMIN" | "SCORER" | "PLAYER";
+  turfId?: string;
+  turfName?: string;
+}
+
 export const authAPI = {
-  login: async (data: TurfLoginData): Promise<AuthResponse> => {
-    const response = await api.post("/turfs/login", data);
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const response = await api.post("/auth/login", data);
     return response.data;
   },
 
-  register: async (data: TurfRegisterData): Promise<AuthResponse> => {
-    const response = await api.post("/turfs/register", data);
+  register: async (data: RegisterRequest): Promise<AuthResponse> => {
+    const response = await api.post("/auth/register", data);
     return response.data;
   },
 
-  getMe: async () => {
-    const response = await api.get("/turfs/me");
+  sendOTP: async (phone: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post("/auth/send-otp", { phone });
+    return response.data;
+  },
+
+  sendRegistrationOTP: async (email?: string, phone?: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post("/auth/send-registration-otp", { email, phone });
+    return response.data;
+  },
+
+  getProfile: async (): Promise<{ user: AuthUserResponse }> => {
+    const response = await api.get("/auth/profile");
     return response.data;
   },
 };

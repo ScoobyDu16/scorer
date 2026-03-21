@@ -1,0 +1,307 @@
+{
+  "info": {
+    "_postman_id": "admin-invitation-api",
+    "name": "Admin Invitation API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Admin Invitation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"phone\": \"+1234567890\",\n  \"invitedBy\": \"system\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/create",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Invitation Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/status?token=YOUR_TOKEN_HERE",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "status"
+          ],
+          "query": [
+            {
+              "key": "token",
+              "value": "YOUR_TOKEN_HERE"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Send Email OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/send-email-otp",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "send-email-otp"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Email OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\",\n  \"otp\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/verify-email-otp",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "verify-email-otp"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Send Phone OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/send-phone-otp",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "send-phone-otp"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Phone OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\",\n  \"otp\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/verify-phone-otp",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "verify-phone-otp"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Set Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\",\n  \"password\": \"YourSecurePassword123!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/set-password",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "set-password"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Setup TOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/setup-totp",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",,
+          "path": [
+            "api",
+            "admin-invitations",
+            "setup-totp"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify TOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\",\n  \"otp\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/verify-totp",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",],
+          "path": [
+            "api",
+            "admin-invitations",
+            "verify-totp"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Complete Registration",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"YOUR_TOKEN_HERE\",\n  \"name\": \"Admin User\",\n  \"password\": \"YourSecurePassword123!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/admin-invitations/complete",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          ],
+          "path": [
+            "api",
+            "admin-invitations",
+            "complete"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
