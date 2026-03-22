@@ -1,1 +1,0 @@
-ALTER TABLE "matches" ADD COLUMN "players_per_team" integer DEFAULT 11 NOT NULL;

@@ -1,2 +1,0 @@
-CREATE TYPE "public"."dismissal_type" AS ENUM('BOWLED', 'CAUGHT', 'CAUGHT_AND_BOWLED', 'RUN_OUT', 'LBW', 'STUMPED', 'HIT_WICKET', 'RETIRED');--> statement-breakpoint
-ALTER TABLE "player_match_stats" ADD COLUMN "dismissal_type" "dismissal_type";
