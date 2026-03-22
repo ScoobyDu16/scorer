@@ -12,6 +12,7 @@ import { generateSecureOTP, storeEmailOTP, storePhoneOTP } from './otp.service';
 import { setupTOTPForInvitation } from './totp.service';
 import { EmailService } from './email.service';
 import { SMSService } from './sms.service';
+import { Fast2SMSService } from './fast2sms.service';
 import { SecurityService } from './security.service';
 
 /**
@@ -88,7 +89,7 @@ export const verifyInviteToken = (token: string): { valid: boolean; invitationId
 export const createAdminInvitation = async (data: InvitationRequest, requestContext?: { ip: string; userAgent: string }): Promise<InvitationResponse> => {
   try {
     const emailService = EmailService.getInstance();
-    const smsService = SMSService.getInstance();
+    const smsService = process.env.FAST2SMS_API_KEY ? Fast2SMSService.getInstance() : SMSService.getInstance();
     const securityService = SecurityService.getInstance();
 
     // Check if invitation already exists for this email or phone
@@ -312,7 +313,7 @@ export const sendEmailOTPForInvitation = async (token: string): Promise<{ succes
  */
 export const sendPhoneOTPForInvitation = async (token: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const smsService = SMSService.getInstance();
+    const smsService = process.env.FAST2SMS_API_KEY ? Fast2SMSService.getInstance() : SMSService.getInstance();
     const tokenVerification = verifyInviteToken(token);
     
     if (!tokenVerification.valid) {

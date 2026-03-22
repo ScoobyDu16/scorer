@@ -56,18 +56,6 @@ export const adminInvitationAPI = {
     return response.data;
   },
 
-  // Send phone OTP
-  sendPhoneOTP: async (token: string): Promise<{ success: boolean; message: string }> => {
-    const response = await axios.post(`${API_BASE_URL}/admin-invitations/send-phone-otp`, { token });
-    return response.data;
-  },
-
-  // Verify phone OTP
-  verifyPhoneOTP: async (data: AdminInvitationVerifyRequest): Promise<{ success: boolean; message: string }> => {
-    const response = await axios.post(`${API_BASE_URL}/admin-invitations/verify-phone-otp`, data);
-    return response.data;
-  },
-
   // Set password
   setPassword: async (data: AdminInvitationPasswordRequest): Promise<{ success: boolean; message: string }> => {
     const response = await axios.post(`${API_BASE_URL}/admin-invitations/set-password`, data);

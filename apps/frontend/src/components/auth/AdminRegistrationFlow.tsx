@@ -6,7 +6,7 @@ interface AdminRegistrationFlowProps {
   invitationToken: string;
 }
 
-type RegistrationStep = 'status' | 'email-otp' | 'phone-otp' | 'password' | 'totp' | 'complete';
+type RegistrationStep = 'status' | 'email-otp' | 'password' | 'totp' | 'complete';
 
 export const AdminRegistrationFlow: React.FC<AdminRegistrationFlowProps> = ({ invitationToken }) => {
   const navigate = useNavigate();
@@ -18,7 +18,6 @@ export const AdminRegistrationFlow: React.FC<AdminRegistrationFlowProps> = ({ in
   
   // Form data for different steps
   const [emailOTP, setEmailOTP] = useState('');
-  const [phoneOTP, setPhoneOTP] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [totpSecret, setTotpSecret] = useState('');
@@ -38,9 +37,7 @@ export const AdminRegistrationFlow: React.FC<AdminRegistrationFlowProps> = ({ in
       if (response.invitation.status === 'PENDING') {
         setCurrentStep('email-otp');
       } else if (response.invitation.status === 'EMAIL_VERIFIED') {
-        setCurrentStep('phone-otp');
-      } else if (response.invitation.status === 'PHONE_VERIFIED') {
-        setCurrentStep('password');
+        setCurrentStep('password'); // Skip phone OTP, go directly to password
       } else if (response.invitation.status === 'PASSWORD_SET') {
         setCurrentStep('totp');
       } else if (response.invitation.status === 'COMPLETED') {
@@ -76,46 +73,12 @@ export const AdminRegistrationFlow: React.FC<AdminRegistrationFlowProps> = ({ in
       const result = await adminInvitationAPI.verifyEmailOTP({ token: invitationToken, otp: emailOTP });
       if (result.success) {
         setSuccess('Email verified successfully!');
-        setTimeout(() => setCurrentStep('phone-otp'), 2000);
+        setTimeout(() => setCurrentStep('password'), 2000); // Skip phone OTP, go directly to password
       } else {
         setError(result.message);
       }
     } catch (err) {
       setError('Failed to verify email OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendPhoneOTP = async () => {
-    try {
-      setLoading(true);
-      const result = await adminInvitationAPI.sendPhoneOTP(invitationToken);
-      if (result.success) {
-        setSuccess('Phone OTP sent successfully!');
-      } else {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError('Failed to send phone OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyPhoneOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const result = await adminInvitationAPI.verifyPhoneOTP({ token: invitationToken, otp: phoneOTP });
-      if (result.success) {
-        setSuccess('Phone verified successfully!');
-        setTimeout(() => setCurrentStep('password'), 2000);
-      } else {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError('Failed to verify phone OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -250,50 +213,6 @@ export const AdminRegistrationFlow: React.FC<AdminRegistrationFlowProps> = ({ in
                     className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:opacity-50"
                   >
                     {loading ? 'Verifying...' : 'Verify Email OTP'}
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'phone-otp':
-        return (
-          <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-blue-800 mb-2">Step 2: Verify Phone</h3>
-              <p className="text-sm text-blue-600">Now let's verify your phone number.</p>
-            </div>
-            
-            {!success && (
-              <button
-                onClick={handleSendPhoneOTP}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Sending...' : 'Send Phone OTP'}
-              </button>
-            )}
-
-            {success && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">{success}</p>
-                <form onSubmit={handleVerifyPhoneOTP} className="mt-4 space-y-4">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={phoneOTP}
-                    onChange={(e) => setPhoneOTP(e.target.value)}
-                    placeholder="Enter 6-digit OTP"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-center text-lg"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {loading ? 'Verifying...' : 'Verify Phone OTP'}
                   </button>
                 </form>
               </div>

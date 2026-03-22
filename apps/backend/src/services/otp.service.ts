@@ -172,11 +172,12 @@ export const verifyEmailOTP = async (
       };
     }
 
-    // Mark email as verified and clear OTP
+    // Mark email as verified and phone as verified (skipping phone OTP)
     await db
       .update(adminInvitations)
       .set({
         emailVerified: true,
+        phoneVerified: true, // Auto-verify phone since we're skipping phone OTP
         emailOtpHash: null,
         emailOtpExpiresAt: null,
         emailOtpAttempts: 0,
