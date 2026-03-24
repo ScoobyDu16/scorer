@@ -8,6 +8,8 @@ import inningRoutes from "../modules/innings/inning.routes";
 import leaderboardRoutes from "../modules/leaderboard/leaderboard.routes";
 import authRoutes from "./auth.routes";
 import adminRoutes from "./admin-routes";
+import analyticsRoutes from "./analytics.routes";
+import moderationRoutes from "./moderation.routes";
 
 const router = Router();
 
@@ -16,6 +18,8 @@ router.use("/auth", authRoutes);
 
 // Protected routes
 router.use("/admin", adminRoutes);
+router.use("/analytics", analyticsRoutes);
+router.use("/moderation", moderationRoutes);
 router.use("/turfs", turfRoutes);
 router.use("/players", playerRoutes);
 router.use("/access-codes", accessCodeRoutes);
