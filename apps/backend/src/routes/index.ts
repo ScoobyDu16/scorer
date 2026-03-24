@@ -6,9 +6,16 @@ import matchRoutes from "../modules/match/match.routes";
 import dashboardRoutes from "../modules/dashboard/dashboard.routes";
 import inningRoutes from "../modules/innings/inning.routes";
 import leaderboardRoutes from "../modules/leaderboard/leaderboard.routes";
+import authRoutes from "./auth.routes";
+import adminRoutes from "./admin-routes";
 
 const router = Router();
 
+// Public routes
+router.use("/auth", authRoutes);
+
+// Protected routes
+router.use("/admin", adminRoutes);
 router.use("/turfs", turfRoutes);
 router.use("/players", playerRoutes);
 router.use("/access-codes", accessCodeRoutes);
