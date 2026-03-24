@@ -55,6 +55,11 @@ export const matches = pgTable("matches", {
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
 
+  // Scoring lock fields
+  activeScorerId: uuid("active_scorer_id"), // User ID of currently active scorer
+  scorerSessionId: uuid("scorer_session_id"), // Unique session ID for scoring session
+  lockExpiresAt: timestamp("lock_expires_at"), // When the scoring lock expires
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -9,7 +9,11 @@
     "start": "node dist/server.js",
     "drizzle:generate": "drizzle-kit generate",
     "drizzle:migrate": "drizzle-kit migrate",
-    "drizzle:studio": "drizzle-kit studio"
+    "drizzle:studio": "drizzle-kit studio",
+    "seed": "ts-node src/seeders/index.ts",
+    "seed:auth": "ts-node src/seeders/seed-auth.ts",
+    "seed:admin": "ts-node src/seeders/seed-super-admin.ts",
+    "seed:plans": "ts-node src/seeders/seed-plans.ts"
   },
   "keywords": [],
   "author": "",
