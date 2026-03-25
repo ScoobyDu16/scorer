@@ -9,15 +9,8 @@ import {
 
 export const authAPI = {
   login: async (data: TurfLoginData): Promise<AuthResponse> => {
-    console.log("🔍 Login attempt:", { email: data.email, endpoint: "/auth/login" });
-    try {
-      const response = await api.post("/auth/login", data);
-      console.log("✅ Login response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("❌ Login error:", error);
-      throw error;
-    }
+    const response = await api.post("/auth/login", data);
+    return response.data;
   },
 
   register: async (data: TurfRegisterData): Promise<AuthResponse> => {
@@ -242,7 +235,25 @@ export const matchAPI = {
 };
 
 export const dashboardAPI = {
-  getStats: async (): Promise<{
+  // SUPER_ADMIN dashboard
+  getSuperAdminStats: async (): Promise<{
+    stats: {
+      totalTurfs: number;
+      activeSubscriptions: number;
+      totalUsers: number;
+      todayMatches: number;
+    };
+    recentActivity: {
+      recentTurfs: any[];
+      recentMatches: any[];
+    };
+  }> => {
+    const response = await api.get("/admin/dashboard/stats");
+    return response.data;
+  },
+
+  // TURF_ADMIN dashboard
+  getTurfAdminStats: async (): Promise<{
     totalPlayers: number;
     totalMatches: number;
   }> => {

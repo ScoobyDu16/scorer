@@ -8,6 +8,10 @@ interface User {
   email: string;
   phone?: string;
   address?: string;
+  role?: string;
+  turfId?: string;
+  avatarUrl?: string;
+  status?: string;
 }
 
 interface AuthContextType {

@@ -27,9 +27,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       }, 1000);
     },
     onError: (error: any) => {
-      console.error("🔥 Login mutation error:", error);
       const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Login failed';
-      console.error("🔥 Error message to display:", errorMessage);
       setError(errorMessage);
       setSuccess('');
     },

@@ -11,9 +11,13 @@ import {
   ArrowRightOnRectangleIcon,
   BellIcon,
   PlusIcon,
-  QrCodeIcon
+  QrCodeIcon,
+  BuildingOfficeIcon,
+  ChartBarIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRolePermissions, UserRole } from '../../lib/permissions';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -36,38 +40,91 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, actions }
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const navigation: NavItem[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: HomeIcon,
-      href: '/dashboard',
-    },
-    {
-      id: 'matches',
-      label: 'Manage Matches',
-      icon: CalendarIcon,
-      href: '/match-management',
-    },
-    {
-      id: 'players',
-      label: 'Players',
-      icon: UsersIcon,
-      href: '/players',
-    },
-    {
-      id: 'generate-code',
-      label: 'Generate Code',
-      icon: QrCodeIcon,
-      href: '/generate-code',
-    },
-    {
+  const userRole = user?.role as UserRole;
+  const permissions = getRolePermissions(userRole);
+
+  const getNavigationByRole = (): NavItem[] => {
+    const navItems: NavItem[] = [];
+
+    // Dashboard
+    if (permissions.canViewDashboard) {
+      navItems.push({
+        id: 'dashboard',
+        label: userRole === 'SUPER_ADMIN' ? 'Platform Overview' : 'Dashboard',
+        icon: HomeIcon,
+        href: '/dashboard',
+      });
+    }
+
+    // SUPER_ADMIN specific navigation
+    if (userRole === 'SUPER_ADMIN') {
+      navItems.push({
+        id: 'turfs',
+        label: 'Manage Turfs',
+        icon: BuildingOfficeIcon,
+        href: '/admin/turfs',
+      });
+      
+      navItems.push({
+        id: 'analytics',
+        label: 'Analytics',
+        icon: ChartBarIcon,
+        href: '/admin/analytics',
+      });
+    }
+
+    // TURF_ADMIN specific navigation
+    if (userRole === 'TURF_ADMIN') {
+      if (permissions.canManageMatches) {
+        navItems.push({
+          id: 'matches',
+          label: 'Manage Matches',
+          icon: CalendarIcon,
+          href: '/match-management',
+        });
+      }
+
+      if (permissions.canManagePlayers) {
+        navItems.push({
+          id: 'players',
+          label: 'Players',
+          icon: UsersIcon,
+          href: '/players',
+        });
+      }
+
+      if (permissions.canGenerateCodes) {
+        navItems.push({
+          id: 'generate-code',
+          label: 'Generate Code',
+          icon: QrCodeIcon,
+          href: '/generate-code',
+        });
+      }
+    }
+
+    // SCORER specific navigation
+    if (userRole === 'SCORER' && permissions.canScoreMatches) {
+      navItems.push({
+        id: 'scoring',
+        label: 'Score Matches',
+        icon: ClipboardDocumentListIcon,
+        href: '/scoring',
+      });
+    }
+
+    // Settings for all authenticated users
+    navItems.push({
       id: 'settings',
       label: 'Settings',
       icon: Cog6ToothIcon,
       href: '/settings',
-    },
-  ];
+    });
+
+    return navItems;
+  };
+
+  const navigation = getNavigationByRole();
 
   const isActiveRoute = (href: string) => {
     if (href === '/dashboard') {
@@ -142,14 +199,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, actions }
 
             {/* Right side - Quick Actions and Profile */}
             <div className="flex items-center space-x-4">
-              {/* Start Match Button */}
-              <button
-                onClick={() => navigate('/match-flow')}
-                className="hidden sm:flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Start Match
-              </button>
+              {/* Role-specific action button */}
+              {permissions.canCreateMatches && (
+                <button
+                  onClick={() => navigate('/match-flow')}
+                  className="hidden sm:flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Start Match
+                </button>
+              )}
+              {permissions.canScoreMatches && (
+                <button
+                  onClick={() => navigate('/scoring')}
+                  className="hidden sm:flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                >
+                  <ClipboardDocumentListIcon className="h-4 w-4 mr-2" />
+                  Score Matches
+                </button>
+              )}
 
               {/* Notifications */}
               <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
