@@ -1,10 +1,16 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest, authenticateToken, requireTurfAdmin, requireScorer, requirePlayer } from "../../middleware/auth";
 import { getDashboardStats, getDashboardTopPlayers } from "./dashboard.controller";
 
 const router = Router();
 
-router.get("/", authMiddleware, getDashboardStats);
-router.get("/top-players", authMiddleware, getDashboardTopPlayers);
+// Apply authentication to all routes
+router.use(authenticateToken);
+
+// Dashboard stats (All authenticated users)
+router.get("/", getDashboardStats);
+
+// Top players (All authenticated users)
+router.get("/top-players", getDashboardTopPlayers);
 
 export default router;

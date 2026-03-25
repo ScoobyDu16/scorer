@@ -6,6 +6,7 @@ export * from "./match-players";
 export * from "./innings";
 export * from "./balls";
 export * from "./player-match-stats";
+export * from "./scoring-locks";
 export * from "./users";
 export * from "./roles";
 export * from "./user-roles";

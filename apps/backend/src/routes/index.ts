@@ -12,6 +12,7 @@ import analyticsRoutes from "./analytics.routes";
 import moderationRoutes from "./moderation.routes";
 import turfAdminRoutes from "./turf-admin.routes";
 import turfRegistrationRoutes from "./turf-registration.routes";
+import scoringLockRoutes from "./scoring-lock.routes";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use("/admin", adminRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/moderation", moderationRoutes);
 router.use("/turf-admin", turfAdminRoutes);
+router.use("/scoring-locks", scoringLockRoutes);
 router.use("/turfs", turfRoutes);
 router.use("/players", playerRoutes);
 router.use("/access-codes", accessCodeRoutes);

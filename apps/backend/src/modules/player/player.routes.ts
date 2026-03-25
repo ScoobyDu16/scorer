@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest, authenticateToken, requirePlayer, requireTurfAdmin, requireScorer } from "../../middleware/auth";
 import {
   createPlayer,
   getPlayer,
@@ -13,13 +13,31 @@ import {
 
 const router = Router();
 
-router.post("/", authMiddleware, createPlayer);
-router.get("/", authMiddleware, getPlayers);
-router.get("/yet-to-bat", authMiddleware, getPlayersYetToBat);
-router.get("/:playerId/career", authMiddleware, getPlayerCareer);
-router.get("/:playerId/stats", authMiddleware, getPlayerStats);
-router.get("/:playerId", authMiddleware, getPlayer);
-router.put("/:playerId", authMiddleware, updatePlayer);
-router.delete("/:playerId", authMiddleware, deletePlayer);
+// Apply authentication to all routes
+router.use(authenticateToken);
+
+// Create player (TURF_ADMIN and SCORER)
+router.post("/", requireTurfAdmin, createPlayer);
+
+// Get all players (All authenticated users)
+router.get("/", getPlayers);
+
+// Get players yet to bat (All authenticated users)
+router.get("/yet-to-bat", getPlayersYetToBat);
+
+// Get player career stats (All authenticated users)
+router.get("/:playerId/career", getPlayerCareer);
+
+// Get player stats (All authenticated users)
+router.get("/:playerId/stats", getPlayerStats);
+
+// Get player details (All authenticated users)
+router.get("/:playerId", getPlayer);
+
+// Update player (TURF_ADMIN and SCORER)
+router.put("/:playerId", requireTurfAdmin, updatePlayer);
+
+// Delete player (TURF_ADMIN only)
+router.delete("/:playerId", requireTurfAdmin, deletePlayer);
 
 export default router;

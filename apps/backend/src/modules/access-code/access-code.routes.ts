@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest, authenticateToken, requireTurfAdmin } from "../../middleware/auth";
 import {
   generateAccessCode,
   validateAccessCode,
@@ -7,10 +7,13 @@ import {
 
 const router = Router();
 
-// Owner generates code (protected)
-router.post("/generate", authMiddleware, generateAccessCode);
+// Apply authentication to all routes
+router.use(authenticateToken);
 
-// Player validates code (public)
+// Owner generates code (TURF_ADMIN only)
+router.post("/generate", requireTurfAdmin, generateAccessCode);
+
+// Player validates code (public - no auth required)
 router.post("/validate", validateAccessCode);
 
 export default router;

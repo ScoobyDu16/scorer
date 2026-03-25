@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest, authenticateToken, requireScorer, requireTurfAdmin } from "../../middleware/auth";
+import { requireScoringLock, requireNoScoringLock } from "../../middleware/scoring-lock.middleware";
 import {
   addBall,
   addMatchPlayers,
@@ -19,39 +20,49 @@ import {
 
 const router = Router();
 
-// Get all matches for turf
-router.get("/", authMiddleware, getMatches);
+// Apply authentication to all routes
+router.use(authenticateToken);
 
-// Get created matches for generate code page
-router.get("/created", authMiddleware, getCreatedMatches);
+// Get all matches for turf (TURF_ADMIN and SCORER)
+router.get("/", requireTurfAdmin, getMatches);
 
-// Get single match details
-router.get("/:matchId", authMiddleware, getMatch);
+// Get created matches for generate code page (TURF_ADMIN and SCORER)
+router.get("/created", requireTurfAdmin, getCreatedMatches);
 
-// Delete match
-router.delete("/:matchId", authMiddleware, deleteMatch);
+// Get single match details (All authenticated users)
+router.get("/:matchId", getMatch);
 
-// Owner creates match
-router.post("/", authMiddleware, createMatch);
+// Delete match (TURF_ADMIN only) - requires no active scoring
+router.delete("/:matchId", requireTurfAdmin, requireNoScoringLock, deleteMatch);
 
-// Add players to match
-router.post("/:matchId/players", authMiddleware, addMatchPlayers);
+// Owner creates match (TURF_ADMIN and SCORER)
+router.post("/", requireTurfAdmin, createMatch);
 
-// Get match players
-router.get("/:matchId/players", authMiddleware, getMatchPlayers);
+// Add players to match (TURF_ADMIN and SCORER)
+router.post("/:matchId/players", requireTurfAdmin, addMatchPlayers);
 
-router.post("/:matchId/start", authMiddleware, startMatch);
+// Get match players (All authenticated users)
+router.get("/:matchId/players", getMatchPlayers);
 
-router.post("/:matchId/start-second", authMiddleware, startSecondInnings);
+// Start match (SCORER only) - requires scoring lock
+router.post("/:matchId/start", requireScorer, requireScoringLock, startMatch);
 
-router.post("/:matchId/balls", authMiddleware, addBall);
+// Start second innings (SCORER only) - requires scoring lock
+router.post("/:matchId/start-second", requireScorer, requireScoringLock, startSecondInnings);
 
-router.delete("/:matchId/balls/last", authMiddleware, undoLastBall);
+// Add ball (SCORER only) - requires scoring lock
+router.post("/:matchId/balls", requireScorer, requireScoringLock, addBall);
 
-router.post("/:matchId/end-innings", authMiddleware, endInnings);
+// Undo last ball (SCORER only) - requires scoring lock
+router.delete("/:matchId/balls/last", requireScorer, requireScoringLock, undoLastBall);
 
+// End innings (SCORER only) - requires scoring lock
+router.post("/:matchId/end-innings", requireScorer, requireScoringLock, endInnings);
+
+// Get match score (All authenticated users)
 router.get("/:matchId/score", getMatchScore);
 
+// Get match scorecard (All authenticated users)
 router.get("/:matchId/scorecard", getMatchScorecard);
 
 export default router;
