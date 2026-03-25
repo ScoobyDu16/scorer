@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(storedToken); // Set token first
         try {
           const userData = await authAPI.getMe();
-          setUser(userData.turf);
+          setUser(userData.user);
         } catch (error) {
           console.error('Failed to verify token:', error);
           // Don't immediately remove token on network errors
@@ -55,9 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = (response: AuthResponse) => {
-    setUser(response.turf);
-    setToken(response.token);
-    localStorage.setItem('token', response.token);
+    setUser(response.user);
+    setToken(response.tokens.accessToken);
+    localStorage.setItem('token', response.tokens.accessToken);
   };
 
   const logout = () => {

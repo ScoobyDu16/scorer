@@ -9,17 +9,24 @@ import {
 
 export const authAPI = {
   login: async (data: TurfLoginData): Promise<AuthResponse> => {
-    const response = await api.post("/turfs/login", data);
-    return response.data;
+    console.log("🔍 Login attempt:", { email: data.email, endpoint: "/auth/login" });
+    try {
+      const response = await api.post("/auth/login", data);
+      console.log("✅ Login response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Login error:", error);
+      throw error;
+    }
   },
 
   register: async (data: TurfRegisterData): Promise<AuthResponse> => {
-    const response = await api.post("/turfs/register", data);
+    const response = await api.post("/turf-registration/register", data);
     return response.data;
   },
 
   getMe: async () => {
-    const response = await api.get("/turfs/me");
+    const response = await api.get("/auth/me");
     return response.data;
   },
 };

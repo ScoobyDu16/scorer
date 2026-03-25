@@ -12,6 +12,7 @@ export const api = axios.create({
 
 // Add token to requests if it exists
 api.interceptors.request.use((config) => {
+  console.log("🚀 API Request:", config.method?.toUpperCase(), config.url, config.baseURL);
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -21,9 +22,16 @@ api.interceptors.request.use((config) => {
 
 // Handle auth errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log("✅ API Response:", response.status, response.config.url);
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
+    console.error("❌ API Error:", error.response?.status, error.config?.url, error.response?.data);
+    // Only redirect on 401 if not on login page and not a login request
+    if (error.response?.status === 401 && 
+        !window.location.pathname.includes('/auth') && 
+        !error.config?.url?.includes('/auth/login')) {
       localStorage.removeItem('token');
       window.location.href = '/auth';
     }
@@ -38,22 +46,42 @@ export interface TurfLoginData {
 }
 
 export interface TurfRegisterData {
+  // Turf details
   name: string;
   email: string;
-  password: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  gstNumber?: string;
+  
+  // Admin user details
+  adminName: string;
+  adminEmail: string;
+  adminPhone?: string;
+  adminPassword: string;
+  
+  // Subscription plan
+  planId?: string;
 }
 
 export interface AuthResponse {
-  turf: {
+  message: string;
+  user: {
     id: string;
     name: string;
     email: string;
     phone?: string;
-    address?: string;
+    status?: string;
+    role?: string;
+    turfId?: string;
+    avatarUrl?: string;
   };
-  token: string;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+  };
 }
 
 export interface Player {
