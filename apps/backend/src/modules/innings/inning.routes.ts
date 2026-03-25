@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middleware/auth.middleware";
+import { authenticateToken } from "../../middleware/auth";
 import { changeBowler } from "../match/match.controller";
 
 const router = Router();
 
-router.post("/:inningsId/change-bowler", authMiddleware, changeBowler);
+router.post("/:inningsId/change-bowler", authenticateToken, changeBowler);
 
 export default router;

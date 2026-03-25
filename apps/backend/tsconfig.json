@@ -5,7 +5,14 @@
     "module": "CommonJS",
     "target": "ES2020",
     "esModuleInterop": true,
-    "strict": true
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false
   },
   "include": ["src", "drizzle.config.ts"]
 }

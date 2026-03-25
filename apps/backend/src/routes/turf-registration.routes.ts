@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { db } from "../db";
 import { turfs, users, subscriptions, plans, userRoles, roles } from "../db/schema";
-import { eq, count } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { AuthenticatedRequest, authenticateToken } from "../middleware/auth";
 import bcrypt from "bcrypt";
 import { generateTokens } from "../middleware/auth";
@@ -90,6 +90,10 @@ router.post("/register", async (req: AuthenticatedRequest, res: Response) => {
         })
         .returning();
 
+      if (!newTurf) {
+        throw new Error("Failed to create turf");
+      }
+
       console.log(" Turf created:", newTurf.id);
 
       // Create admin user
@@ -105,6 +109,10 @@ router.post("/register", async (req: AuthenticatedRequest, res: Response) => {
           status: "ACTIVE",
         })
         .returning();
+
+      if (!newUser) {
+        throw new Error("Failed to create admin user");
+      }
 
       console.log(" Admin user created:", newUser.id);
 
@@ -170,6 +178,9 @@ router.post("/register", async (req: AuthenticatedRequest, res: Response) => {
     });
 
     // Generate tokens for the admin user
+    if (!result.user) {
+      throw new Error("User not found in registration result");
+    }
     const tokens = generateTokens(result.user.id);
 
     res.status(201).json({
@@ -262,7 +273,7 @@ router.post("/onboarding/complete", authenticateToken, async (req: Authenticated
 });
 
 // Get available plans for registration
-router.get("/plans", async (req: AuthenticatedRequest, res: Response) => {
+router.get("/plans", async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const plansData = await db
       .select({

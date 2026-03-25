@@ -301,6 +301,10 @@ router.patch("/:id/ban", async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { banned, reason } = req.body;
     const userId = Array.isArray(id) ? id[0] : id;
+    
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
 
     const updatedUser = await db
       .update(users)

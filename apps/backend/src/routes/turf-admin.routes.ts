@@ -119,14 +119,14 @@ router.get(
         turf: turfInfo[0],
         stats: {
           matches: {
-            total: totalMatches[0].count,
-            active: activeMatches[0].count,
-            today: todayMatches[0].count,
-            completed: completedMatches[0].count,
+            total: totalMatches[0]?.count || 0,
+            active: activeMatches[0]?.count || 0,
+            today: todayMatches[0]?.count || 0,
+            completed: completedMatches[0]?.count || 0,
           },
           users: {
-            total: totalUsers[0].count,
-            active: activeUsers[0].count,
+            total: totalUsers[0]?.count || 0,
+            active: activeUsers[0]?.count || 0,
           },
         },
         recentMatches,
@@ -292,8 +292,8 @@ router.get("/matches", async (req: AuthenticatedRequest, res: Response) => {
       pagination: {
         page: parseInt(page as string),
         limit: limitNum,
-        total: totalCount[0].count,
-        pages: Math.ceil(totalCount[0].count / limitNum),
+        total: totalCount[0]?.count || 0,
+        pages: Math.ceil((totalCount[0]?.count || 0) / limitNum),
       },
     });
   } catch (error) {
@@ -360,8 +360,8 @@ router.get("/users", async (req: AuthenticatedRequest, res: Response) => {
       pagination: {
         page: parseInt(page as string),
         limit: limitNum,
-        total: totalCount[0].count,
-        pages: Math.ceil(totalCount[0].count / limitNum),
+        total: totalCount[0]?.count || 0,
+        pages: Math.ceil((totalCount[0]?.count || 0) / limitNum),
       },
     });
   } catch (error) {

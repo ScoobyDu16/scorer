@@ -1,5 +1,4 @@
 import { Router } from "express";
-import turfRoutes from "../modules/turf/turf.routes";
 import playerRoutes from "../modules/player/player.routes";
 import accessCodeRoutes from "../modules/access-code/access-code.routes";
 import matchRoutes from "../modules/match/match.routes";
@@ -26,7 +25,6 @@ router.use("/analytics", analyticsRoutes);
 router.use("/moderation", moderationRoutes);
 router.use("/turf-admin", turfAdminRoutes);
 router.use("/scoring-locks", scoringLockRoutes);
-router.use("/turfs", turfRoutes);
 router.use("/players", playerRoutes);
 router.use("/access-codes", accessCodeRoutes);
 router.use("/matches", matchRoutes);

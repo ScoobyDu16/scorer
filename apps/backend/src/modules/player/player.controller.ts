@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest } from "../../middleware/auth";
 import {
   createPlayerService,
   getPlayerByIdService,
@@ -11,9 +11,9 @@ import {
   getPlayersYetToBatService,
 } from "./player.service";
 
-export const createPlayer = async (req: AuthRequest, res: Response) => {
+export const createPlayer = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
     const player = await createPlayerService(turfId, req.body);
 
     res.status(201).json(player);
@@ -22,9 +22,9 @@ export const createPlayer = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPlayerCareer = async (req: AuthRequest, res: Response) => {
+export const getPlayerCareer = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
     const playerId = req.params.playerId as string;
 
     const career = await getPlayerCareerService(turfId, playerId);
@@ -35,9 +35,9 @@ export const getPlayerCareer = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPlayers = async (req: AuthRequest, res: Response) => {
+export const getPlayers = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
     const {
       search,
       page = 1,
@@ -61,7 +61,7 @@ export const getPlayers = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPlayer = async (req: AuthRequest, res: Response) => {
+export const getPlayer = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const playerId = req.params.playerId as string;
 
@@ -77,7 +77,7 @@ export const getPlayer = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPlayerStats = async (req: AuthRequest, res: Response) => {
+export const getPlayerStats = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const playerId = req.params.playerId as string;
 
@@ -89,9 +89,9 @@ export const getPlayerStats = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updatePlayer = async (req: AuthRequest, res: Response) => {
+export const updatePlayer = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
     const playerId = req.params.playerId as string;
 
     const player = await updatePlayerService(playerId, req.body);
@@ -101,7 +101,7 @@ export const updatePlayer = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deletePlayer = async (req: AuthRequest, res: Response) => {
+export const deletePlayer = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const playerId = req.params.playerId as string;
 
@@ -112,7 +112,7 @@ export const deletePlayer = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPlayersYetToBat = async (req: AuthRequest, res: Response) => {
+export const getPlayersYetToBat = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { matchId, team } = req.query;
     

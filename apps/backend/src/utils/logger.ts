@@ -99,7 +99,7 @@ export const requestLogger = (req: any, res: any, next: any) => {
 };
 
 // Error logging middleware
-export const errorLogger = (err: any, req: any, res: any, next: any) => {
+export const errorLogger = (err: any, req: any, _res: any, next: any) => {
   logger.error(`${err.name}: ${err.message}`, {
     stack: err.stack,
     url: req.url,

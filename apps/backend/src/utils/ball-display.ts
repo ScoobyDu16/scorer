@@ -67,6 +67,10 @@ export const formatRecentBalls = (
 
   for (let i = 0; i < limited.length; i++) {
     const ball = limited[i];
+    
+    if (!ball) {
+      continue; // Skip if ball is undefined
+    }
 
     formatted.push(formatBallDisplay(ball));
 

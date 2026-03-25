@@ -1,10 +1,10 @@
 import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest } from "../../middleware/auth";
 import { getDashboardStatsService, getDashboardTopPlayersService } from "./dashboard.service";
 
-export const getDashboardStats = async (req: AuthRequest, res: Response) => {
+export const getDashboardStats = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
     
     const stats = await getDashboardStatsService(turfId);
     
@@ -14,9 +14,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getDashboardTopPlayers = async (req: AuthRequest, res: Response) => {
+export const getDashboardTopPlayers = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
 
     const data = await getDashboardTopPlayersService(turfId);
 

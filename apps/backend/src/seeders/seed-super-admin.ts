@@ -20,7 +20,10 @@ async function seedSuperAdmin() {
     throw new Error("SUPER_ADMIN role not found. Please run seed-auth.ts first.");
   }
 
-  const roleId = superAdminRole[0].id;
+  const roleId = superAdminRole[0]?.id;
+  if (!roleId) {
+    throw new Error("SUPER_ADMIN role ID not found");
+  }
 
   // Create SUPER_ADMIN user
   const adminEmail = "admin@scorer.app";
@@ -46,7 +49,11 @@ async function seedSuperAdmin() {
   let userId: string;
   
   if (existingUser.length > 0) {
-    userId = existingUser[0].id;
+    const existing = existingUser[0];
+    if (!existing) {
+      throw new Error("Failed to get existing user");
+    }
+    userId = existing.id;
     console.log("✅ SUPER_ADMIN user already exists");
   } else {
     const insertedUser = await db
@@ -54,7 +61,11 @@ async function seedSuperAdmin() {
       .values(adminUser)
       .returning({ id: users.id });
     
-    userId = insertedUser[0].id;
+    const inserted = insertedUser[0];
+    if (!inserted) {
+      throw new Error("Failed to create SUPER_ADMIN user");
+    }
+    userId = inserted.id;
     console.log("✅ SUPER_ADMIN user created");
   }
 

@@ -34,6 +34,13 @@ export class ScoringLockService {
 
       if (existingLock.length > 0) {
         const lock = existingLock[0];
+        if (!lock) {
+          return {
+            success: false,
+            message: "Lock information unavailable",
+          };
+        }
+        
         const timeRemaining = Math.floor(
           (new Date(lock.lockExpiresAt).getTime() - new Date().getTime()) / (1000 * 60)
         );
@@ -59,6 +66,13 @@ export class ScoringLockService {
           ipAddress: req.ip,
         })
         .returning();
+
+      if (!newLock) {
+        return {
+          success: false,
+          message: "Failed to create scoring lock",
+        };
+      }
 
       console.log(`🔒 Scoring lock acquired for match ${matchId} by scorer ${scorerId}`);
 
@@ -146,6 +160,14 @@ export class ScoringLockService {
         };
       }
 
+      const existingLock = lock[0];
+      if (!existingLock) {
+        return {
+          success: false,
+          message: "Lock information unavailable",
+        };
+      }
+
       // Update last activity and extend lock if needed
       const now = new Date();
       const lockExpiresAt = new Date(now);
@@ -157,7 +179,7 @@ export class ScoringLockService {
           lastActivityAt: now,
           lockExpiresAt,
         })
-        .where(eq(scoringLocks.id, lock[0].id));
+        .where(eq(scoringLocks.id, existingLock.id));
 
       return {
         success: true,

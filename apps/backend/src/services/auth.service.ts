@@ -24,7 +24,12 @@ export class AuthService {
         throw new Error("Invalid credentials");
       }
 
-      const { user, role, turfId } = userWithRole[0];
+      const result = userWithRole[0];
+      if (!result) {
+        throw new Error("Invalid credentials");
+      }
+
+      const { user, role, turfId } = result;
 
       if (!user || !user.passwordHash) {
         throw new Error("Invalid credentials");
@@ -83,7 +88,12 @@ export class AuthService {
         throw new Error("User not found");
       }
 
-      const { user, role, turfId } = userWithRole[0];
+      const result = userWithRole[0];
+      if (!result) {
+        throw new Error("User not found");
+      }
+
+      const { user, role, turfId } = result;
 
       // Generate new tokens
       const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id);
@@ -122,6 +132,9 @@ export class AuthService {
       }
 
       const currentUser = user[0];
+      if (!currentUser) {
+        throw new Error("User not found");
+      }
 
       if (!currentUser.passwordHash) {
         throw new Error("Password not set for this user");

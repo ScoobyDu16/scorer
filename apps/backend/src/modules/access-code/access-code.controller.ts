@@ -1,16 +1,15 @@
-import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth.middleware";
+import { Response, Request } from "express";
+import { AuthenticatedRequest } from "../../middleware/auth";
 import {
   generateAccessCodeService,
   validateAccessCodeService,
 } from "./access-code.service";
 import { getMatchByIdRepo } from "../match/match.repository";
-import { markAccessCodeUsedRepo } from "./access-code.repository";
 
 /**
  * Owner generates code
  */
-export const generateAccessCode = async (req: AuthRequest, res: Response) => {
+export const generateAccessCode = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { matchId } = req.body;
 
@@ -25,7 +24,7 @@ export const generateAccessCode = async (req: AuthRequest, res: Response) => {
 /**
  * Player validates code
  */
-export const validateAccessCode = async (req: any, res: Response) => {
+export const validateAccessCode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { matchId, code } = req.body;
 
@@ -43,6 +42,10 @@ export const validateAccessCode = async (req: any, res: Response) => {
 
     // Get updated match details (status should now be ACCESS_VERIFIED)
     const match = await getMatchByIdRepo(matchId);
+
+    if (!match) {
+      return res.status(404).json({ message: "Match not found" });
+    }
 
     res.json({
       message: "Code valid",

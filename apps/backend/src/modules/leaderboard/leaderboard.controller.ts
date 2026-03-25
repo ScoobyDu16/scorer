@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthRequest } from "../../middleware/auth.middleware";
+import { AuthenticatedRequest } from "../../middleware/auth";
 import { getLeaderboardService } from "./leaderboard.service";
 import { LeaderboardMetric } from "./leaderboard.repository";
 
@@ -24,9 +24,9 @@ const isLeaderboardMetric = (value: string): value is LeaderboardMetric => {
   ].includes(value);
 };
 
-export const getLeaderboard = async (req: AuthRequest, res: Response) => {
+export const getLeaderboard = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const turfId = req.turfId!;
+    const turfId = req.user?.turfId!;
 
     const metricRaw = String(req.query.metric || "runs");
     if (!isLeaderboardMetric(metricRaw)) {
