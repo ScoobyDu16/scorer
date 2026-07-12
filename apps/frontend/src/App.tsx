@@ -14,6 +14,10 @@ import { ScoringPage } from "./pages/ScoringPage";
 import { ScorecardPage } from "./pages/ScorecardPage";
 import { MatchFlow } from "./components/MatchFlow";
 import { MatchManagementPage } from "./pages/MatchManagementPage";
+import { AdminTurfsPage } from "./pages/AdminTurfsPage";
+import { AdminTurfDetailsPage } from "./pages/AdminTurfDetailsPage";
+import { AdminSubscriptionsPage } from "./pages/AdminSubscriptionsPage";
+import { AdminAnalyticsPage } from "./pages/AdminAnalyticsPage";
 
 function App() {
   return (
@@ -58,6 +62,12 @@ function App() {
                     path="/match-management"
                     element={<MatchManagementPage turfId="current" />}
                   />
+
+                  {/* SUPER_ADMIN Routes */}
+                  <Route path="/admin/turfs" element={<AdminTurfsPage />} />
+                  <Route path="/admin/turfs/:id" element={<AdminTurfDetailsPage />} />
+                  <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+                  <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
 
                   {/* Unified Match Flow - handles all match lifecycle steps */}
                   <Route path="/match-flow/:matchId?" element={<MatchFlow />} />

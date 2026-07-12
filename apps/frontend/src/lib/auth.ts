@@ -283,6 +283,65 @@ export const leaderboardAPI = {
   },
 };
 
+// SUPER_ADMIN APIs
+export const adminAPI = {
+  // Turf Management
+  getTurfs: async (page = 1, limit = 10) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    const response = await api.get(`/admin/turfs?${params.toString()}`);
+    return response.data;
+  },
+
+  getTurfDetails: async (turfId: string) => {
+    const response = await api.get(`/admin/turfs/${turfId}`);
+    return response.data;
+  },
+
+  updateTurfVerification: async (turfId: string, status: string) => {
+    const response = await api.patch(`/admin/turfs/${turfId}/verification`, { status });
+    return response.data;
+  },
+
+  // Subscription Management
+  getSubscriptions: async (page = 1, limit = 10) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    const response = await api.get(`/admin/subscriptions?${params.toString()}`);
+    return response.data;
+  },
+
+  // Analytics
+  getAnalyticsOverview: async (period = '30') => {
+    const response = await api.get(`/analytics/overview?period=${period}`);
+    return response.data;
+  },
+
+  getRegistrationTrends: async (period = '30') => {
+    const response = await api.get(`/analytics/registrations?period=${period}`);
+    return response.data;
+  },
+
+  getSubscriptionTrends: async (period = '30') => {
+    const response = await api.get(`/analytics/subscriptions?period=${period}`);
+    return response.data;
+  },
+
+  getMatchStatistics: async (period = '30') => {
+    const response = await api.get(`/analytics/matches?period=${period}`);
+    return response.data;
+  },
+
+  getVerificationStats: async () => {
+    const response = await api.get('/analytics/verifications');
+    return response.data;
+  },
+};
+
 export const setAuthToken = (token: string) => {
   localStorage.setItem("token", token);
 };
